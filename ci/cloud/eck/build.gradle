@@ -221,7 +221,7 @@ def getElasticsearchPassword(dirname) {
   def s = new ByteArrayOutputStream()
   exec {
     workingDir dirname
-    commandLine 'kubectl', 'get', 'secret', 'estfk8-es-elastic-user',
+    commandLine './kubectl', 'get', 'secret', 'estfk8-es-elastic-user',
                 "-o=jsonpath='{.data.elastic}'"
     standardOutput = s
   }
