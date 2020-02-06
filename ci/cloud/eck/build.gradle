@@ -154,7 +154,7 @@ task delete_container() {
 // *********************************************************************************
 task install_eck() {
   doFirst {
-    def out = runShell("kubectl apply -f" +
+    def out = runShell("./kubectl apply -f" +
                        "https://download.elastic.co/downloads/eck/1.0.0/all-in-one.yaml",
                        "$projectDir")
   }
@@ -188,7 +188,7 @@ def waitForElasticsearch() {
   long finish = System.currentTimeMillis() + 180000;
   def isRunning = false
   while (System.currentTimeMillis() < finish) {
-    def out = runShell('kubectl get elasticsearch', "$projectDir")
+    def out = runShell('./kubectl get elasticsearch', "$projectDir")
     def match = (out =~ /green(.*)Ready/)
     if (match.find()) {
       isRunning = true
@@ -205,7 +205,7 @@ def waitForElasticsearch() {
 task deploy_elasticsearch_cluster() {
   doFirst {
     updateSpec("$projectDir/es-spec.yml", "${getenv_var['gcr_es']}")
-    def out = runShell("kubectl apply -f" + "$projectDir/es-spec.yml",
+    def out = runShell("./kubectl apply -f" + "$projectDir/es-spec.yml",
                        "$projectDir")
     def match = (out =~ /elasticsearch(.*)created/)
     if (! match.find()) {
@@ -217,9 +217,10 @@ task deploy_elasticsearch_cluster() {
 }
 
 // *********************************************************************************
-def getElasticsearchPassword() {
+def getElasticsearchPassword(dirname) {
   def s = new ByteArrayOutputStream()
   exec {
+    workingDir dirname
     commandLine 'kubectl', 'get', 'secret', 'estfk8-es-elastic-user',
                 "-o=jsonpath='{.data.elastic}'"
     standardOutput = s
@@ -233,7 +234,7 @@ def getElasticsearchPassword() {
 // *********************************************************************************
 task get_elasticsearch_credentials() {
   doFirst {
-    ext.password = getElasticsearchPassword()
+    ext.password = getElasticsearchPassword("$projectDir")
 
     File file = new File("$projectDir" + "/" + rootProject.ext.cluster_name + ".properties")
     file.write("kibana_url=https://localhost:5601\n")
@@ -294,7 +295,7 @@ def waitForKibana() {
   long finish = System.currentTimeMillis() + 180000;
   def isRunning = false
   while (System.currentTimeMillis() < finish) {
-    def out = runShell("kubectl get kibana", "$projectDir")
+    def out = runShell("./kubectl get kibana", "$projectDir")
     def match = (out =~ /green/)
     if (match.find()) {
       isRunning = true
@@ -311,7 +312,7 @@ def waitForKibana() {
 task deploy_kibana_cluster() {
   doFirst {
     updateSpec("$projectDir/kbn-spec.yml", "${getenv_var['gcr_kbn']}")
-    def out = runShell("kubectl apply -f" + "$projectDir/kbn-spec.yml",
+    def out = runShell("./kubectl apply -f" + "$projectDir/kbn-spec.yml",
                        "$projectDir")
     def match = (out =~ /kibana(.*)created/)
     if (! match.find()) {
