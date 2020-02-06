@@ -336,7 +336,7 @@ task start_forward_kbn_port() {
   doFirst {
     ext.process = new ProcessBuilder()
                       .directory(projectDir)
-                      .command("./kubectl", "port-forward",
+                      .command("./kubectl", "port-forward", "--request-timeout=4h",
                                "service/estfk8-kb-http", "5601")
                       .start()
     Thread.sleep(2000)
