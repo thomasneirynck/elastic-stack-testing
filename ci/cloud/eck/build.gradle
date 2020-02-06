@@ -7,6 +7,7 @@
 
 import org.estf.gradle.ShellCommand
 import org.ajoberstar.grgit.Grgit
+import org.estf.gradle.EckCredentials
 
 plugins {
   id 'org.ajoberstar.grgit' version '1.7.2' apply false
@@ -56,6 +57,34 @@ task getenv_var {
     ext.whole_ver = "$cloud_ver-$build_hash"
     ext.gcr_es = "gcr.io/$gc_project/elasticsearch:$whole_ver"
     ext.gcr_kbn = "gcr.io/$gc_project/kibana:$whole_ver"
+  }
+}
+
+// *********************************************************************************
+task gcloud_auth() {
+  doFirst {
+    EckCredentials creds = new EckCredentials()
+    creds.dir = "$projectDir"
+    creds.vaultAuth()
+    def filename = creds.getFileName()
+    def username = creds.getUserName()
+    def out = runShell("gcloud auth activate-service-account " + username +
+                      " --key-file " + filename +
+                      " --project " + "${getenv_var['gc_project']}",
+                      "$projectDir")
+  }
+}
+
+
+// *********************************************************************************
+task dockr_login() {
+  doFirst {
+    EckCredentials creds = new EckCredentials()
+    creds.dir = "$projectDir"
+    creds.vaultAuth()
+    def filename = creds.getFileName()
+    def out = runShell('docker login -u _json_key -p "' + filename +
+                       '" https://gcr.io')
   }
 }
 
@@ -437,13 +466,14 @@ task docker_push_gcr_kbn(type: Exec) {
 // *********************************************************************************
 task eck_push_gcr_images(type: GradleBuild) {
   println "In ${name}"
-  tasks = ['getenv_var', 'docker_load_tag',
+  tasks = ['getenv_var', 'docker_login', 'docker_load_tag',
            'docker_push_gcr_es', 'docker_push_gcr_kbn']
 }
 
 // *********************************************************************************
 task eck_run_kibana_tests(dependsOn: getenv_var) {
   doFirst {
+    gcloud_auth.execute()
     create_container.execute()
     install_eck.execute()
     deploy_elasticsearch_cluster.execute()
