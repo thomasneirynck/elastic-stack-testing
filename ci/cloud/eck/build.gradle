@@ -266,7 +266,7 @@ task start_forward_es_port() {
   doFirst {
     ext.process = new ProcessBuilder()
                       .directory(projectDir)
-                      .command("kubectl", "port-forward",
+                      .command("./kubectl", "port-forward",
                                "service/estfk8-es-http", "9200")
                       .start()
     Thread.sleep(2000)
@@ -336,7 +336,7 @@ task start_forward_kbn_port() {
   doFirst {
     ext.process = new ProcessBuilder()
                       .directory(projectDir)
-                      .command("kubectl", "port-forward",
+                      .command("./kubectl", "port-forward",
                                "service/estfk8-kb-http", "5601")
                       .start()
     Thread.sleep(2000)
