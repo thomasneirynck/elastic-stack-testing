@@ -95,12 +95,14 @@ task dockr_login() {
  */
 
 // *********************************************************************************
-def downloadKubectl() {
+def downloadKubectl(dirname) {
   exec {
+    workingDir dirname
     commandLine 'curl', '-LOs',
       'https://storage.googleapis.com/kubernetes-release/release/v1.17.2/bin/linux/amd64/kubectl'
   }
   exec {
+    workingDir dirname
     commandLine 'chmod', '+x', 'kubectl'
   }
 }
@@ -108,7 +110,7 @@ def downloadKubectl() {
 // *********************************************************************************
 task create_container() {
   doFirst {
-    downloadKubectl()
+    downloadKubectl("$projectDir")
     def num = Math.abs(new Random().nextInt() % 25000) + 1
     def name = "estf-cluster-" + num.toString()
     def out = runShell("gcloud container clusters create " + name +
