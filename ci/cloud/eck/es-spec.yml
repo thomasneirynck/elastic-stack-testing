@@ -3,7 +3,8 @@ kind: Elasticsearch
 metadata:
   name: estfk8
 spec:
-  version: <version> 
+  image: <image>
+  version: <version>
   nodeSets:
   - name: default
     count: 1

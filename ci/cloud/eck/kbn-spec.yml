@@ -3,6 +3,7 @@ kind: Kibana
 metadata:
   name: estfk8
 spec:
+  image: <image>
   version: <version>
   count: 1
   config:

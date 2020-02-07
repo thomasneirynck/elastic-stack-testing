@@ -171,9 +171,7 @@ def updateSpec(filename, image) {
     File file = new File(filename)
     String fileContents = file.getText('UTF-8')
     fileContents = fileContents.replace('<version>', "${getenv_var['cloud_ver']}")
-    if (image) {
-      fileContents = fileContents.replace('spec:', 'spec:\n' + '  image: ' + image)
-    }
+    fileContents = fileContents.replace('<image>', image)
     file.write(fileContents)
 }
 
