@@ -18,4 +18,7 @@ spec:
     telemetry.banner: false
   elasticsearchRef:
     name: estfk8
-
+  http:
+    service:
+      spec:
+        type: LoadBalancer

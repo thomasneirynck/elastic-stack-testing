@@ -84,7 +84,7 @@ task dockr_login() {
     creds.vaultAuth()
     def filename = creds.getFileName()
     def out = runShell('docker login -u _json_key -p "' + filename +
-                       '" https://gcr.io')
+                       '" https://gcr.io', "$projectDir")
   }
 }
 
@@ -232,15 +232,30 @@ def getElasticsearchPassword(dirname) {
 }
 
 // *********************************************************************************
-task get_elasticsearch_credentials() {
+def getExternalIp(svc_name) {
+
+  def out = runShell('./kubectl get svc', "$projectDir")
+  def match = (out =~ /$svc_name(.*) ((?:[0-9]{1,3}\.){3}[0-9]{1,3})(.*) ((?:[0-9]{1,3}\.){3}[0-9]{1,3})/)
+  if (match.find()) {
+    return match.group(4).trim()
+  }
+  throw new GradleException("Unable to get exernal IP for service: " + svc_name)
+}
+
+// *********************************************************************************
+task get_credentials() {
   doFirst {
+
+    ext.username = 'elastic'
     ext.password = getElasticsearchPassword("$projectDir")
+    ext.elasticsearch_url = "https://" + getExternalIp('estfk8-es-http') + ":9200"
+    ext.kibana_url = "https://" + getExternalIp('estfk8-kb-http') + ":5601"
 
     File file = new File("$projectDir" + "/" + rootProject.ext.cluster_name + ".properties")
-    file.write("kibana_url=https://localhost:5601\n")
-    file.append("elasticsearch_url=https://localhost:9200\n")
-    file.append("es_username=elastic\n")
+    file.write("es_username=" + username + "\n")
     file.append("es_password=" + password + "\n")
+    file.append("kibana_url=" + kibana_url + "\n")
+    file.append("elasticsearch_url=" + elasticsearch_url + "\n")
 
     Properties properties = new Properties()
     file.withInputStream {
@@ -253,33 +268,13 @@ task get_elasticsearch_credentials() {
 }
 
 // *********************************************************************************
-task stop_forward_es_port() {
-  doFirst {
-    if (tasks.start_forward_es_port.process) {
-      tasks.start_forward_es_port.process.destroy()
-    }
-  }
-}
-
-// *********************************************************************************
-task start_forward_es_port() {
-  doFirst {
-    ext.process = new ProcessBuilder()
-                      .directory(projectDir)
-                      .command("./kubectl", "port-forward",
-                               "service/estfk8-es-http", "9200")
-                      .start()
-    Thread.sleep(2000)
-  }
-}
-
-// *********************************************************************************
 task request_elasticsearch() {
   doFirst {
-    def match = ""
-    def password = get_elasticsearch_credentials.password
-    def out = runShell('curl -u ' + 'elastic:' + password +
-                       ' -k https://localhost:9200', "$projectDir")
+    def username = get_credentials.username
+    def password = get_credentials.password
+    def es_url = get_credentials.elasticsearch_url
+    def out = runShell('curl -u ' + username + ':' + password +
+                       ' -k ' + es_url, "$projectDir")
     println out
   }
 }
@@ -346,10 +341,11 @@ task start_forward_kbn_port() {
 // *********************************************************************************
 task request_kibana() {
   doFirst {
-    def password = get_elasticsearch_credentials.password
-    println password
-    def out = runShell('curl -u ' + 'elastic:' + password +
-                       ' -k https://localhost:5601/api/status',
+    def username = get_credentials.username
+    def password = get_credentials.password
+    def kbn_url = get_credentials.kibana_url
+    def out = runShell('curl -u ' + username + ':' + password +
+                       ' -k ' + kbn_url + '/api/status',
                        "$projectDir")
     println out
   }
@@ -480,11 +476,9 @@ task eck_run_kibana_tests(dependsOn: getenv_var) {
     create_container.execute()
     install_eck.execute()
     deploy_elasticsearch_cluster.execute()
-    get_elasticsearch_credentials.execute()
-    start_forward_es_port.execute()
-    request_elasticsearch.execute()
     deploy_kibana_cluster.execute()
-    start_forward_kbn_port.execute()
+    get_credentials.execute()
+    request_elasticsearch.execute()
     request_kibana.execute()
     tasks.getByPath(':common:run_kibana_tests').execute()
   }

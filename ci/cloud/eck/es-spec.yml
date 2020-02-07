@@ -12,4 +12,7 @@ spec:
       node.data: true
       node.ingest: true
       node.store.allow_mmap: false
-
+  http:
+    service:
+      spec:
+        type: LoadBalancer
