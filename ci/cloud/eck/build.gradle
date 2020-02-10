@@ -349,6 +349,19 @@ task request_kibana() {
   }
 }
 
+// *********************************************************************************
+task activate_trial_license() {
+  doFirst {
+    def out = runShell("./kubectl apply -f" + "$projectDir/trial-license-spec.yml",
+                       "$projectDir")
+    def match = (out =~ /eck-trial-license created/)
+    if (! match.find()) {
+     throw new GradleException("Activate trial license failed!")
+    }
+    Thread.sleep(2000)
+  }
+}
+
 /*
  ***********************************************************************************
   Docker Images
@@ -475,6 +488,7 @@ task eck_run_kibana_tests(dependsOn: getenv_var) {
     install_eck.execute()
     deploy_elasticsearch_cluster.execute()
     deploy_kibana_cluster.execute()
+    activate_trial_license.execute()
     get_credentials.execute()
     request_elasticsearch.execute()
     request_kibana.execute()
