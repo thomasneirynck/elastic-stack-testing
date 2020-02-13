@@ -19,16 +19,9 @@ xpackGrp1="advanced_settings
            canvas
            code
            cross_cluster_replication
-           dashboard
-           dashboard_mode
-           dev_tools
-           discover
-           graph
            grok_debugger
            index_lifecycle_management
            index_management
-           infra
-           logstash
            machine_learning
            license_management
           "
@@ -40,6 +33,14 @@ xpackGrp2="status_page
            visualize
            watcher
            index_patterns
+           logstash
+           graph
+           discover
+           dashboard
+           dashboard_mode
+           canvas
+           dev_tools
+           infra
           "
 
 xpackGrp3="maps
