@@ -587,6 +587,7 @@ function install_kibana() {
 # -----------------------------------------------------------------------------
 function set_percy_target_branch() {
   export PERCY_TARGET_BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
+  export PERCY_BRANCH=$PERCY_TARGET_BRANCH
 }
 
 # -----------------------------------------------------------------------------
