@@ -28,7 +28,6 @@ import co.elastic.cloud.api.builder.TopologySizeBuilder;
 import co.elastic.cloud.api.client.ClusterClient;
 import co.elastic.cloud.api.client.generated.ClustersElasticsearchApi;
 import co.elastic.cloud.api.client.generated.ClustersKibanaApi;
-import co.elastic.cloud.api.client.generated.PlatformConfigurationInstancesApi;
 import co.elastic.cloud.api.model.generated.ClusterCredentials;
 import co.elastic.cloud.api.model.generated.ClusterCrudResponse;
 import co.elastic.cloud.api.model.generated.CreateElasticsearchClusterRequest;
@@ -99,10 +98,25 @@ public class CreateCloudCluster extends DefaultTask {
         // Setup cluster client
         CloudApi cloudApi = new CloudApi();
         ClusterClient clusterClient = cloudApi.createClient();
-        PlatformConfigurationInstancesApi instanceClient = new PlatformConfigurationInstancesApi(cloudApi.getApiClient());
 
         // Create cluster
-        ClusterCrudResponse response = clusterClient.createEsCluster(createClusterRequest(instanceClient));
+        String es_cfg = "aws.highio.classic";
+        String kbn_cfg = "aws.kibana.classic";
+        String ml_cfg = "aws.ml.m5";
+        String data_region = System.getenv("ESTF_CLOUD_REGION");
+        if (data_region != null) {
+            if (data_region.contains("gcp")) {
+                es_cfg = "gcp.highio.classic";
+                kbn_cfg = "gcp.kibana.classic";
+                ml_cfg = "gcp.ml.1";
+            } else if (data_region.contains("azure")) {
+                es_cfg = "master";
+                kbn_cfg = "kibana";
+                ml_cfg = "ml";
+            }
+        }
+
+        ClusterCrudResponse response = clusterClient.createEsCluster(createClusterRequest(es_cfg, kbn_cfg, ml_cfg));
         ClustersKibanaApi kbnApi = new ClustersKibanaApi(cloudApi.getApiClient());
         Waiter.waitFor(() -> cloudApi.isKibanaRunning(
             kbnApi.getKibanaCluster(response.getKibanaClusterId(), false, true, false, false)
@@ -149,7 +163,8 @@ public class CreateCloudCluster extends DefaultTask {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
+        }
+
     }
 
     public String getClusterId() {
@@ -183,31 +198,7 @@ public class CreateCloudCluster extends DefaultTask {
         return jsonRequest;
     }
 
-    private String createInstanceConfig( PlatformConfigurationInstancesApi instanceClient,
-                                         String instanceType, String name, List<String> types) {
-        DiscreteSizes discreteSizes = new DiscreteSizesBuilder()
-            .setSizes(Collections.singletonList(1024))
-            .setDefaultSize(1024)
-            .setResource(DiscreteSizes.ResourceEnum.MEMORY)
-            .build();
-
-        InstanceConfiguration instanceConfiguration = new InstanceConfigurationBuilder()
-            .setName(name)
-            .setNodeTypes(types)
-            .setInstanceType(instanceType)
-            .setDiscreteSizes(discreteSizes)
-            .build();
-
-        return instanceClient.createInstanceConfiguration(instanceConfiguration).getId();
-    }
-
-    private CreateElasticsearchClusterRequest createClusterRequest(PlatformConfigurationInstancesApi instanceClient) {
-
-        String esConfigId = createInstanceConfig(instanceClient, "elasticsearch", "es-cfg", Arrays.asList("master", "data"));
-
-        String mlConfigId = createInstanceConfig(instanceClient, "elasticsearch", "ml-cfg", Collections.singletonList("ml"));
-
-        String kbnConfigId = createInstanceConfig(instanceClient, "kibana", "kbn-cfg", null);
+    private CreateElasticsearchClusterRequest createClusterRequest(String esConfigId, String kbnConfigId, String mlConfigId) {
 
         TopologySize topologySize = new TopologySizeBuilder()
             .setValue(1024)
