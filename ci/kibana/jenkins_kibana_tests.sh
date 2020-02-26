@@ -533,10 +533,6 @@ function check_git_changes() {
   if [ "$_git_changes" ]; then
     echo_error_exit "'yarn kbn bootstrap' caused changes to the following files:\n$_git_changes"
   fi
-  # Hack for testing now, will do something official later
-  if [[ ! -z $TEST_IGNORE_CERT_ERRORS ]]; then
-     sed -i "s/chromeOptions.push('headless', 'disable-gpu');/chromeOptions.push('headless', 'disable-gpu', 'ignore-certificate-errors');/g" "test/functional/services/remote/webdriver.ts"
-  fi
 }
 
 # -----------------------------------------------------------------------------
