@@ -325,7 +325,6 @@ function get_kibana_url() {
 # Method to download and extract Kibana package
 # ----------------------------------------------------------------------------
 function download_and_extract_package() {
-
   if [ ! -z $Glb_Kibana_Dir ]; then
     return
   fi
@@ -387,9 +386,10 @@ function in_kibana_repo() {
     echo_error_exit "CI setup must be run within a Kibana repo"
   fi
 
-  # For rerunning, modified files
-  git checkout test/functional/config.js
-  git checkout x-pack/test/functional/config.js
+  check_test_files
+
+  git checkout test
+  git checkout x-pack/test
   git checkout .yarnrc
 }
 
@@ -485,7 +485,7 @@ function yarn_kbn_bootstrap() {
 
   if $Glb_ChromeDriverHack; then
     echo_warning "Temporary update package.json bump chromedriver."
-    sed -ie 's/"chromedriver": "^76.0.0"/"chromedriver": "^75.1.0"/g' package.json
+    sed -i 's/"chromedriver": "^76.0.0"/"chromedriver": "^75.1.0"/g' package.json
   fi
 
   # For windows testing
@@ -532,10 +532,6 @@ function check_git_changes() {
   fi
   if [ "$_git_changes" ]; then
     echo_error_exit "'yarn kbn bootstrap' caused changes to the following files:\n$_git_changes"
-  fi
-  # Hack for testing now, will do something official later
-  if [[ ! -z $TEST_IGNORE_CERT_ERRORS ]]; then
-     sed -i "s/chromeOptions.push('headless', 'disable-gpu');/chromeOptions.push('headless', 'disable-gpu', 'ignore-certificate-errors');/g" "test/functional/services/remote/webdriver.ts"
   fi
 }
 
@@ -587,6 +583,7 @@ function install_kibana() {
 # -----------------------------------------------------------------------------
 function set_percy_target_branch() {
   export PERCY_TARGET_BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
+  export PERCY_BRANCH=$PERCY_TARGET_BRANCH
 }
 
 # -----------------------------------------------------------------------------
@@ -623,7 +620,6 @@ function cp_xpack_visual_tests() {
 # Get Percy version from package.json file
 # ----------------------------------------------------------------------------
 function check_percy_pkg() {
-
   local _percyVersion=$(cat package.json | \
                         grep "percy" | \
                         cut -d ':' -f 2 | \
@@ -639,6 +635,294 @@ function check_percy_pkg() {
 # *****************************************************************************
 # SECTION: Running test functions
 # *****************************************************************************
+
+# -----------------------------------------------------------------------------
+# Method to set kibana version from build specifier for flaky test runner
+# -----------------------------------------------------------------------------
+function check_kibana_version() {
+   if [ -z $ESTF_KIBANA_VERSION ]; then
+    echo_error_exit "ESTF_KIBANA_VERSION can't be empty!"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to check clodu version for flaky test runner
+# -----------------------------------------------------------------------------
+function check_cloud_version() {
+  if [ -z $ESTF_CLOUD_VERSION ]; then
+    echo_error_exit "ESTF_CLOUD_VERSION can't be empty!"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to check test suite values are all in one group
+# -----------------------------------------------------------------------------
+function _check_array_vals_eq() {
+    arr=("$@")
+    if [ ${#arr[@]} -eq 0 ]; then
+      echo_error_exit "ESTF_FLAKY_TEST_SUITE is empty or is not in proper format"
+    elif awk 'v && $1!=v{ exit 1 }{ v=$1 }' <(printf "%s\n" "${arr[@]}"); then
+      echo_info "Test Suite Group: ${arr[0]}"
+    else
+      echo_error_exit "ESTF_FLAKY_TEST_SUITE can not have mixed values: oss, xpack, xpackExt"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to check test suite for flaky test runner
+# -----------------------------------------------------------------------------
+function check_test_suite() {
+  IFS='
+  '
+  types=()
+  for item in $ESTF_FLAKY_TEST_SUITE
+  do
+    testSuiteRoot=${item%%/*}
+    if [[ "$testSuiteRoot" == "test" ]] ||
+       [[ "$testSuiteRoot" == *"ossGrp"* ]]; then
+      types+=( "oss" )
+    elif [[ "$testSuiteRoot" == "x-pack" ]]; then
+      if [[ "$item" != *"/functional/"* ]]; then
+        types+=( "xpackExt" )
+      else
+        types+=( "xpack" )
+      fi
+    elif [[ "$testSuiteRoot" == *"xpackGrp"* ]]; then
+      types+=( "xpack" )
+    elif  [[ "$testSuiteRoot" == *"xpackExt"* ]]; then
+      types+=( "xpackExt" )
+    fi
+  done
+
+  _check_array_vals_eq "${types[@]}"
+}
+
+# -----------------------------------------------------------------------------
+# Method to set test suite for flaky test runner
+# -----------------------------------------------------------------------------
+function set_test_group() {
+  export ESTF_TEST_GROUP="${ESTF_FLAKY_TEST_SUITE%%/*}"
+}
+
+# -----------------------------------------------------------------------------
+# Method to check number of executions for flaky test runner
+# -----------------------------------------------------------------------------
+function check_number_executions() {
+  ESTF_NUMBER_EXECUTIONS=$( expr $ESTF_NUMBER_EXECUTIONS + 0 )
+  re='^[0-9]+$'
+  if ! [[ $ESTF_NUMBER_EXECUTIONS =~ $re ]] ; then
+    echo_error_exit "ESTF_NUMBER_EXECUTIONS is not a number!"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to set number of executions for flaky test runner
+# -----------------------------------------------------------------------------
+function set_number_executions_deployments() {
+  # Apply min and max
+  if [ $ESTF_NUMBER_EXECUTIONS -lt 0 ]; then
+    ESTF_NUMBER_EXECUTIONS=1
+  fi
+
+  if [ $ESTF_NUMBER_EXECUTIONS -gt 40 ]; then
+    ESTF_NUMBER_EXECUTIONS=40
+  fi
+
+  ESTF_NUMBER_DEPLOYMENTS=1
+  if [ $ESTF_NUMBER_EXECUTIONS -gt 20 ]; then
+    ESTF_NUMBER_DEPLOYMENTS=2
+  fi
+
+  ESTF_NUMBER_EXECUTIONS=$(($ESTF_NUMBER_EXECUTIONS / $ESTF_NUMBER_DEPLOYMENTS))
+
+  export ESTF_NUMBER_EXECUTIONS
+  export ESTF_NUMBER_DEPLOYMENTS
+
+  echo_debug "ESTF_NUMBER_EXECUTIONS: $ESTF_NUMBER_EXECUTIONS"
+  echo_debug "ESTF_NUMBER_DEPLOYMENTS: $ESTF_NUMBER_DEPLOYMENTS"
+}
+
+# -----------------------------------------------------------------------------
+# Method to check test type for flaky test runner
+# -----------------------------------------------------------------------------
+function check_test_type() {
+  # Get the type of test to run
+  if [ -z $ESTF_TEST_PLATFORM ]; then
+    echo_error_exit "ESTF_TEST_PLATFORM can't be empty!"
+  fi
+
+  valid_platforms=()
+  valid_platforms+=('saas')
+  # TODO: add eck and ece later
+  if [[ " ${valid_platforms[*]} " != *"$ESTF_TEST_PLATFORM"* ]]; then
+    echo_error_exit "Invalid ESTF_TEST_PLATFORM, must be one of $valid_platforms"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method create job file for flaky test runner
+# -----------------------------------------------------------------------------
+function create_matrix_job_file() {
+  local matrixJobDir="${JENKINS_HOME:-ci/kibana/jobs}"
+  local matrixJobFile="$matrixJobDir/flaky_jobs.yml"
+
+  if [ ! -d $matrixJobDir ]; then
+    echo_error_exit "Matrix job directory does not exist!"
+  fi
+
+  echo "TASK:" > $matrixJobFile
+  echo "  - ${ESTF_TEST_PLATFORM}_run_kibana_tests" >> $matrixJobFile
+  echo "JOB: " >> $matrixJobFile
+  for i in $(seq 1 1 $ESTF_NUMBER_DEPLOYMENTS); do
+    echo "  - flakyRun$i" >> $matrixJobFile
+  done
+  echo "exclude: ~" >> $matrixJobFile
+}
+
+# -----------------------------------------------------------------------------
+# Method to get test file
+# -----------------------------------------------------------------------------
+function get_test_file() {
+  local item=$1
+
+  testFile=""
+  if [ -d "$item" ]; then
+    if [ -f "$item/index.js" ]; then
+      testFile="$item/index.js"
+    elif [ -f "$item/index.ts" ]; then
+      testFile="$item/index.ts"
+    fi
+  elif [ -f "$item" ]; then
+    testFile=$item
+  fi
+  echo $testFile
+}
+
+# -----------------------------------------------------------------------------
+# Method to check test files and directories exist
+# This can be files or top level feature directories.
+# TODO: Add test/<extended tests>
+# Examples:
+#   test/functional/<feature>
+#   test/functional/<feature>/<file>
+#   x-pack/test/functional/<feature>
+#   x-pack/test/functional/<feature>/<file>
+#   x-pack/test/<extended test>/<feature>
+#   x-pack/test/<extended test>/<feature>/<file>
+#   test/functional
+#   x-pack/functional
+# -----------------------------------------------------------------------------
+function check_test_files() {
+  IFS='
+  '
+  errors=0
+  for item in $ESTF_FLAKY_TEST_SUITE
+  do
+    testFile=$(get_test_file $item)
+    if [ -z $testFile ]; then
+      echo_error "File does not exist: $item!"
+      errors=1
+    fi
+  done
+  if [ $errors -eq 1 ]; then
+    echo_error_exit "ESTF_FLAKY_TEST_SUITE not all paths are valid!"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to run flaky test runner cloud prechecks
+# -----------------------------------------------------------------------------
+function flaky_test_runner_cloud_prechecks() {
+  check_kibana_version
+  check_cloud_version
+  check_test_suite
+  check_number_executions
+  set_number_executions_deployments
+  check_test_type
+  create_matrix_job_file
+}
+
+# -----------------------------------------------------------------------------
+# Method to run flaky Kibana tests
+# TODO: Add eck, ece and on-prem
+# (Mainly for functional UI tests)
+# -----------------------------------------------------------------------------
+function flaky_test_runner() {
+  echo_info "In flaky_test_runner"
+
+  cloud_platforms=()
+  cloud_platforms+=('saas')
+  cloud_platforms+=('ece')
+  cloud_platforms+=('eck')
+
+  set_test_group
+  set_number_executions_deployments
+
+  # If just the top level directory is specified to run whole
+  # suite, then set extended group
+  if [[ $ESTF_TEST_GROUP == "x-pack" ]] &&
+     [[ "$ESTF_FLAKY_TEST_SUITE" != *"/functional"* ]]; then
+    ESTF_TEST_GROUP=xpackext
+  fi
+
+  if [[ " ${cloud_platforms[*]} " == *"$ESTF_TEST_PLATFORM"* ]]; then
+    PLATFORM=cloud
+  fi
+
+  echo_debug "ESTF_TEST_GROUP: $ESTF_TEST_GROUP"
+  echo_debug "ESTF_TEST_PLATFORM: $ESTF_TEST_PLATFORM"
+  echo_debug "ESTF_FLAKY_TEST_SUITE: $ESTF_FLAKY_TEST_SUITE"
+
+  case "$ESTF_TEST_GROUP" in
+    oss|test)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_oss_tests
+      else
+        run_oss_tests
+      fi
+      ;;
+    xpack|x-pack)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_xpack_func_tests
+      else
+        run_xpack_func_tests
+      fi
+      ;;
+    xpackext)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_xpack_ext_tests
+      else
+        run_xpack_ext_tests
+      fi
+      ;;
+    ossGrp*)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_oss_tests $ESTF_TEST_GROUP
+      else
+        run_oss_tests $ESTF_TEST_GROUP
+      fi
+      ;;
+    xpackGrp*)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_xpack_func_tests $ESTF_TEST_GROUP
+      else
+        run_xpack_func_tests $ESTF_TEST_GROUP
+      fi
+      ;;
+    xpackExt*)
+      if [ $PLATFORM == "cloud" ]; then
+        run_cloud_xpack_ext_tests
+      else
+        run_xpack_ext_tests false $ESTF_TEST_GROUP
+      fi
+      ;;
+    *)
+      echo_error_exit "ESTF_TEST_GROUP '$ESTF_TEST_GROUP' is invalid group"
+      ;;
+  esac
+
+  echo "DONE!"
+}
 
 # -----------------------------------------------------------------------------
 # Method to run Kibana unit tests
@@ -719,27 +1003,38 @@ function run_xpack_unit_tests() {
 function run_oss_tests() {
   echo_info "In run_oss_tests"
   local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   run_ci_setup
 
   includeTags=$(update_config "test/functional/config.js" $testGrp)
+  update_test_files
+
   TEST_KIBANA_BUILD=oss
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
 
-  echo_info " -> Running oss functional tests"
-  eval node scripts/functional_tests \
-        --esFrom snapshot \
-        --kibana-install-dir=${Glb_Kibana_Dir} \
-        --config test/functional/config.js \
-        --debug " $includeTags" \
-        -- --server.maxPayloadBytes=1679958
-  RC=$?
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running oss functional tests, run $i of $maxRuns"
+    eval node scripts/functional_tests \
+          --esFrom snapshot \
+          --kibana-install-dir=${Glb_Kibana_Dir} \
+          --config test/functional/config.js \
+          --debug " $includeTags" \
+          -- --server.maxPayloadBytes=1679958
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
 
   run_ci_cleanup
 
-  exit_script $RC "OSS Test failed!"
+  exit_script $failures "OSS Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -748,10 +1043,13 @@ function run_oss_tests() {
 function run_xpack_func_tests() {
   echo_info "In run_xpack_func_tests"
   local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   run_ci_setup
 
   includeTags=$(update_config "x-pack/test/functional/config.js" $testGrp)
+  update_test_files
+
   TEST_KIBANA_BUILD=default
   install_kibana
 
@@ -761,18 +1059,25 @@ function run_xpack_func_tests() {
 
   export TEST_BROWSER_HEADLESS=1
 
-  echo_info " -> Running xpack func tests"
-  eval node scripts/functional_tests \
-        --esFrom=snapshot \
-        --config test/functional/config.js \
-        --kibana-install-dir=${Glb_Kibana_Dir} \
-        --debug " $includeTags"
-  RC=$?
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running xpack func tests, run $i of $maxRuns"
+    eval node scripts/functional_tests \
+          --esFrom=snapshot \
+          --config test/functional/config.js \
+          --kibana-install-dir=${Glb_Kibana_Dir} \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
 
   run_ci_cleanup
 
-  exit_script $RC "X-Pack Test failed!"
-
+  exit_script $failures "X-Pack Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -782,8 +1087,11 @@ function run_xpack_ext_tests() {
   echo_info "In run_xpack_ext_tests"
   local funcTests="${1:- false}"
   local testGrp=$2
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   run_ci_setup
+  update_test_files
+
   TEST_KIBANA_BUILD=default
   install_kibana
 
@@ -813,25 +1121,29 @@ function run_xpack_ext_tests() {
   fi
 
   failures=0
-  for cfg in $cfgs; do
-    if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
-      continue
-    fi
-    echo " -> Running xpack ext tests config: $cfg"
-    node scripts/functional_tests \
-      --esFrom=snapshot \
-      --config $cfg \
-      --kibana-install-dir=${Glb_Kibana_Dir} \
-      --debug
-    if [ $? -ne 0 ]; then
-      failures=1
-    fi
+  for i in $(seq 1 1 $maxRuns); do
+    for cfg in $cfgs; do
+      if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
+        continue
+      fi
+      export ESTF_RUN_NUMBER=$i
+      update_report_name $cfg
+
+      echo " -> Running xpack ext tests config: $cfg, run $i of $maxRuns"
+      node scripts/functional_tests \
+        --esFrom=snapshot \
+        --config $cfg \
+        --kibana-install-dir=${Glb_Kibana_Dir} \
+        --debug
+      if [ $? -ne 0 ]; then
+        failures=1
+      fi
+    done
   done
 
   run_ci_cleanup
 
   exit_script $failures "X-Pack Ext Test failed!"
-
 }
 
 # -----------------------------------------------------------------------------
@@ -840,23 +1152,32 @@ function run_xpack_ext_tests() {
 function run_cloud_oss_tests() {
   echo_info "In run_cloud_oss_tests"
   local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
+  update_test_files
 
   export TEST_BROWSER_HEADLESS=1
 
-  echo_info " -> Running cloud oss functional tests"
-  eval node scripts/functional_test_runner \
-        --config test/functional/config.js \
-        --exclude-tag skipCloud \
-        --debug " $includeTags"
-  RC=$?
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running cloud oss functional tests, run $i of $maxRuns"
+    eval node scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --exclude-tag skipCloud \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
 
   run_ci_cleanup
 
-  exit_script $RC "Cloud OSS Test failed!"
-
+  exit_script $failures "Cloud OSS Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -865,9 +1186,11 @@ function run_cloud_oss_tests() {
 function run_cloud_xpack_func_tests() {
   echo_info "In run_cloud_xpack_func_tests"
   local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   run_ci_setup
   includeTags=$(update_config "x-pack/test/functional/config.js" $testGrp)
+  update_test_files
 
   local _xpack_dir="$(cd x-pack; pwd)"
   echo_info "-> XPACK_DIR ${_xpack_dir}"
@@ -875,28 +1198,38 @@ function run_cloud_xpack_func_tests() {
 
   export TEST_BROWSER_HEADLESS=1
 
-  echo_info " -> Running cloud xpack func tests"
-  eval node ../scripts/functional_test_runner \
-        --config test/functional/config.js \
-        --exclude-tag skipCloud \
-        --debug " $includeTags"
-  RC=$?
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running cloud xpack func tests, run $i of $maxRuns"
+    eval node ../scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --exclude-tag skipCloud \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
 
   run_ci_cleanup
 
-  exit_script $RC "Cloud X-Pack Test failed!"
-
+  exit_script $failures "Cloud X-Pack Test failed!"
 }
 
 # -----------------------------------------------------------------------------
 # Method to run cloud xpack tests
 # -----------------------------------------------------------------------------
 function run_cloud_xpack_ext_tests() {
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
   echo_info "In run_cloud_xpack_ext_tests"
   echo_warning "Not all tests are running yet on cloud"
   local funcTests="${1:- false}"
 
   run_ci_setup
+  update_test_files
 
   local _xpack_dir="$(cd x-pack; pwd)"
   echo_info "-> XPACK_DIR ${_xpack_dir}"
@@ -911,18 +1244,23 @@ function run_cloud_xpack_ext_tests() {
         test/api_integration/config.js
        "
   failures=0
-  for cfg in $cfgs; do
-    if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
-      continue
-    fi
-    echo " -> Running cloud xpack ext tests config: $cfg"
-    node ../scripts/functional_test_runner \
-      --config $cfg \
-      --exclude-tag skipCloud \
-      --debug
-    if [ $? -ne 0 ]; then
-      failures=1
-    fi
+  for i in $(seq 1 1 $maxRuns); do
+    for cfg in $cfgs; do
+      if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
+        continue
+      fi
+      export ESTF_RUN_NUMBER=$i
+      update_report_name $cfg
+
+      echo " -> Running cloud xpack ext tests config: $cfg, run $i of $maxRuns"
+      node ../scripts/functional_test_runner \
+        --config $cfg \
+        --exclude-tag skipCloud \
+        --debug
+      if [ $? -ne 0 ]; then
+        failures=1
+      fi
+    done
   done
 
   run_ci_cleanup
@@ -1021,6 +1359,46 @@ function update_config() {
 }
 
 # -----------------------------------------------------------------------------
+# Method to update report name when looping
+# -----------------------------------------------------------------------------
+function update_report_name() {
+  local configFile=$1
+
+  if [ -z $configFile ] ; then
+    return
+  fi
+
+  if [ ! -f $configFile ]; then
+    return
+  fi
+
+  file_modified=$(grep -c "ESTF_RUN_NUMBER" $configFile)
+  echo_debug "$configFile already modified: $file_modified"
+  if [[ $file_modified == 0 ]]; then
+    sed -i '/reportName:.*/ s/,/ + process.env.ESTF_RUN_NUMBER,/' $configFile
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to update test files
+# -----------------------------------------------------------------------------
+function update_test_files() {
+  IFS='
+  '
+  for item in $ESTF_FLAKY_TEST_SUITE
+  do
+    testFile=$(get_test_file $item)
+    echo_debug $testFile
+    git diff --exit-code -s $testFile
+    file_modified=$?
+    echo_debug "$testFile already modified: $file_modified"
+    if [[ $file_modified == 0 ]]; then
+      sed -i '0,/describe(/ s/describe(/describe\.only(/' $testFile
+    fi
+  done
+}
+
+# -----------------------------------------------------------------------------
 # Method to get tag substring, must be after group name, start with Tag til end
 # ex: ossGrp1TagSomething
 # -----------------------------------------------------------------------------
@@ -1105,7 +1483,7 @@ export GCS_UPLOAD_PREFIX="internal-ci-artifacts/jobs/${JOB_NAME}/${BUILD_NUMBER}
 case "$TEST_GROUP" in
   intake)
     if [ $PLATFORM == "cloud" ]; then
-      echo_error "'intake' job is not valid on cloud"
+      echo_error_exit "'intake' job is not valid on cloud"
     fi
     run_unit_tests
     ;;
@@ -1118,7 +1496,7 @@ case "$TEST_GROUP" in
     ;;
   xpackIntake)
     if [ $PLATFORM == "cloud" ]; then
-      echo_error "'x-pack-intake' job is not valid on cloud"
+      echo_error_exit "'x-pack-intake' job is not valid on cloud"
     fi
     run_xpack_unit_tests
     ;;
@@ -1157,7 +1535,13 @@ case "$TEST_GROUP" in
   visual_tests_default)
     run_visual_tests_default
     ;;
+  flaky_test_runner_cloud_prechecks)
+    flaky_test_runner_cloud_prechecks
+    ;;
+  flaky_test_runner)
+    flaky_test_runner
+    ;;
   *)
-    echo_error "TEST_GROUP '$TEST_GROUP' is invalid group"
+    echo_error_exit "TEST_GROUP '$TEST_GROUP' is invalid group"
     ;;
 esac
