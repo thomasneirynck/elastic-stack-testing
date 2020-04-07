@@ -128,9 +128,8 @@ task get_cloud_assets_repo {
     // TODO: Temporarily test branch
     def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
                             uri: 'git@github.com:liza-mae/cloud-assets.git',
-                            refToCheckout: "master")
-    grgit.checkout(branch: 'liza-update/build-scripts')
-
+                            refToCheckout: 'liza-update/build-scripts')
+    
     //def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
     //                        uri: 'git@github.com:elastic/cloud-assets.git',
     //                        refToCheckout: "${getenv_var['kibana_ver']}")
