@@ -125,9 +125,15 @@ task get_cloud_assets_repo {
   doFirst {
     println "In ${name}"
     java.lang.System.setProperty("org.ajoberstar.grgit.auth.session.config.StrictHostKeyChecking", "no")
+    // TODO: Temporarily test branch
     def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
-                            uri: 'git@github.com:elastic/cloud-assets.git',
-                            refToCheckout: "${getenv_var['kibana_ver']}")
+                            uri: 'git@github.com:liza-mae/cloud-assets.git',
+                            refToCheckout: "master")
+    grgit.checkout(branch: 'liza-update/build-scripts')
+
+    //def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
+    //                        uri: 'git@github.com:elastic/cloud-assets.git',
+    //                        refToCheckout: "${getenv_var['kibana_ver']}")
     println grgit.describe()
   }
 }
