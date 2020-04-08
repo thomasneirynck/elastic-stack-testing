@@ -155,7 +155,7 @@ task delete_container() {
 task install_eck() {
   doFirst {
     def out = runShell("./kubectl apply -f" +
-                       "https://download.elastic.co/downloads/eck/1.0.0/all-in-one.yaml",
+                       "https://download.elastic.co/downloads/eck/1.0.1/all-in-one.yaml",
                        "$projectDir")
   }
 }
