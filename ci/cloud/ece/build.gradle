@@ -129,7 +129,7 @@ task get_cloud_assets_repo {
     def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
                             uri: 'git@github.com:liza-mae/cloud-assets.git',
                             refToCheckout: 'liza-update/build-scripts')
-    
+
     //def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
     //                        uri: 'git@github.com:elastic/cloud-assets.git',
     //                        refToCheckout: "${getenv_var['kibana_ver']}")
@@ -292,7 +292,7 @@ task build_baseimage_elasticsearch(dependsOn: populate_build_elasticsearch) {
     if (! dockerImageExists(dockerImage)) {
       _build_image([name: "gen_${name}",
                     dirname: "$buildDir/cloud-assets/docker/elasticsearch/baseimage",
-                    runCmd: "./build.sh ${getenv_var['cloud_ver']} \"\" ${getenv_var['build_hash']} " + populate_build_elasticsearch.tmpdir])
+                    runCmd: "./build.sh ${getenv_var['cloud_ver']} ${getenv_var['build_hash']} " + populate_build_elasticsearch.tmpdir])
     }
   }
 }
