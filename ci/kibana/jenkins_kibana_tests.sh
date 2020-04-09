@@ -216,11 +216,6 @@ function get_version() {
   if [[ -z "$Glb_Kibana_Version" ]]; then
     echo_error_exit "Kibana version can't be empty"
   fi
-
-  # TODO: Temporary to run a 6.8 build, since 6.8.9 is not available yet
-  if [[ "$Glb_Kibana_Version" == "6.8.9" ]]; then
-    Glb_Kibana_Version=6.8.8
-  fi
   
   if [[ "$Glb_Build_Server" == "snapshots" ]]; then
     Glb_Kibana_Version="${Glb_Kibana_Version}-SNAPSHOT"
@@ -1112,10 +1107,7 @@ function run_xpack_ext_tests() {
   cd "$_xpack_dir"
 
   export TEST_BROWSER_HEADLESS=1
-
-  # TODO: Temporary to get reporting logs
-  export DEBUG="puppeteer:*"
-  
+ 
   awk_exec="awk"
   if [[ "$Glb_OS" = "darwin" ]]; then
     awk_exec="gawk"
