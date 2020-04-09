@@ -217,15 +217,15 @@ function get_version() {
     echo_error_exit "Kibana version can't be empty"
   fi
 
-  if [[ "$Glb_Build_Server" == "snapshots" ]]; then
-    Glb_Kibana_Version="${Glb_Kibana_Version}-SNAPSHOT"
-  fi
-  
   # TODO: Temporary to run a 6.8 build, since 6.8.9 is not available yet
   if [[ "$Glb_Kibana_Version" == "6.8.9" ]]; then
     Glb_Kibana_Version=6.8.8
   fi
-   
+  
+  if [[ "$Glb_Build_Server" == "snapshots" ]]; then
+    Glb_Kibana_Version="${Glb_Kibana_Version}-SNAPSHOT"
+  fi
+  
   readonly Glb_Kibana_Version
 }
 
