@@ -554,7 +554,7 @@ function run_ci_setup() {
   install_node
   install_yarn
   yarn_kbn_bootstrap
-  check_git_changes
+  #check_git_changes
 }
 
 # -----------------------------------------------------------------------------
