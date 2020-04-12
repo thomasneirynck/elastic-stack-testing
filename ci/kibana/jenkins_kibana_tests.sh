@@ -216,11 +216,11 @@ function get_version() {
   if [[ -z "$Glb_Kibana_Version" ]]; then
     echo_error_exit "Kibana version can't be empty"
   fi
-  
+
   if [[ "$Glb_Build_Server" == "snapshots" ]]; then
     Glb_Kibana_Version="${Glb_Kibana_Version}-SNAPSHOT"
   fi
-  
+
   readonly Glb_Kibana_Version
 }
 
@@ -554,7 +554,7 @@ function run_ci_setup() {
   install_node
   install_yarn
   yarn_kbn_bootstrap
-  #check_git_changes
+  check_git_changes
 }
 
 # -----------------------------------------------------------------------------
@@ -1107,7 +1107,7 @@ function run_xpack_ext_tests() {
   cd "$_xpack_dir"
 
   export TEST_BROWSER_HEADLESS=1
- 
+
   awk_exec="awk"
   if [[ "$Glb_OS" = "darwin" ]]; then
     awk_exec="gawk"
@@ -1478,7 +1478,7 @@ else
 fi
 
 # -- Set to true, if Chromedriver mismatch on workers
-Glb_ChromeDriverHack=true
+Glb_ChromeDriverHack=false
 Glb_YarnNetworkTimeout=0
 
 # Source pre-defined groups
