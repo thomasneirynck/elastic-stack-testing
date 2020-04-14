@@ -223,8 +223,8 @@ task build_stackpack(dependsOn: get_cloud_assets_repo) {
     println "In ${name}"
     def ver = "${getenv_var['ver_whole']}"
     ShellCommand shell = new ShellCommand("make build-stackpack VERSION=$ver " +
-                                          "ELASTICSEARCH_IMAGE=docker.elastic.co/cloud-ci/elasticsearch:$ver " +
-                                          "KIBANA_IMAGE=docker.elastic.co/cloud-ci/kibana:$ver " +
+                                          "ELASTICSEARCH_IMAGE=docker.elastic.co/cloud-ci/cloud-elasticsearch-base:$ver " +
+                                          "KIBANA_IMAGE=docker.elastic.co/cloud-ci/cloud-kibana-base:$ver " +
                                           "APM_IMAGE=docker.elastic.co/cloud-ci/apm:$ver " +
                                           "ENTERPRISESEARCH_IMAGE=docker.elastic.co/swiftype/enterprise-search:$ver ",
                                           "$buildDir/cloud-assets")
