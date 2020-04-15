@@ -262,16 +262,7 @@ task build_baseimage() {
  */
 
 // *********************************************************************************
-task update_elasticsearch_dockerfile(dependsOn: build_baseimage) {
-  doFirst {
-    _update_dockerfile([name: "gen_${name}",
-                        filename: "$buildDir/cloud-assets/docker/elasticsearch/baseimage/Dockerfile",
-                        dockerImage: build_baseimage.dockerImage])
-  }
-}
-
-// *********************************************************************************
-task populate_build_elasticsearch(dependsOn: update_elasticsearch_dockerfile) {
+task populate_build_elasticsearch(dependsOn: build_baseimage) {
   doFirst {
     ext.tmpdir = getTempDir()
     _populate_build([name: "gen_${name}",
@@ -316,38 +307,6 @@ task build_cloudimage_elasticsearch(dependsOn: build_baseimage_elasticsearch) {
  ***********************************************************************************
  */
 
-// *********************************************************************************
-task update_kibana_dockerfile(dependsOn: build_baseimage) {
-  doFirst {
-    _update_dockerfile([name: "gen_${name}",
-                        filename: "$buildDir/cloud-assets/docker/kibana/baseimage/Dockerfile",
-                        dockerImage: build_baseimage.dockerImage,
-                        rmKibanaPermissions: "yes"])
-  }
-}
-
-// *********************************************************************************
-task populate_build_kibana(dependsOn: update_kibana_dockerfile) {
-  doFirst {
-    ext.tmpdir = getTempDir()
-    _populate_build([name: "gen_${name}",
-                     dirname: "$buildDir/cloud-assets/docker/kibana/baseimage",
-                     tmpdir: tmpdir])
-  }
-}
-
-// *********************************************************************************
-task build_baseimage_kibana(dependsOn: populate_build_kibana) {
-  doFirst {
-    ext.dockerImage = "docker.elastic.co/cloud-ci/cloud-kibana-base:${getenv_var['cloud_ver']}"
-    if (! dockerImageExists(dockerImage)) {
-      _build_image([name: "gen_${name}",
-                    dirname: "$buildDir/cloud-assets/docker/kibana/baseimage",
-                    runCmd: "./build.sh ${getenv_var['cloud_ver']} ${getenv_var['build_hash']} " + populate_build_kibana.tmpdir])
-    }
-  }
-}
-
 /*
  ***********************************************************************************
  Build Cloud Image: Kibana
@@ -355,7 +314,7 @@ task build_baseimage_kibana(dependsOn: populate_build_kibana) {
  */
 
 // *********************************************************************************
-task build_cloudimage_kibana(dependsOn: build_baseimage_kibana) {
+task build_cloudimage_kibana() {
   doFirst {
     ext.dockerImage = "docker.elastic.co/cloud-ci/kibana:${getenv_var['ver_whole']}"
     if (! dockerImageExists(dockerImage)) {
