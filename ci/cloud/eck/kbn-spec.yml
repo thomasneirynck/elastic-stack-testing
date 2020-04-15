@@ -23,6 +23,15 @@ spec:
     xpack.reporting.csv.checkForFormulas: false
   elasticsearchRef:
     name: estfk8
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        resources:
+          requests:
+            memory: 2Gi
+          limits:
+            memory: 2Gi
   http:
     service:
       spec:
