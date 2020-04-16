@@ -233,8 +233,8 @@ public class CreateCloudCluster extends DefaultTask {
         KibanaClusterTopologyElement kbnTopo = new KibanaClusterTopologyElementBuilder()
             .setInstanceConfigurationId(kbnConfigId)
             .setZoneCount(kibanaZone)
-            .setSize(topologySize)
             .setMemoryPerNode(2000)
+            .setNodeCountPerZone(1)
             .build();
 
         ElasticsearchScriptTypeSettings typeSetting = new ElasticsearchScriptTypeSettingsBuilder()
