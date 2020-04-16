@@ -139,6 +139,8 @@ public class CreateCloudCluster extends DefaultTask {
         } else if (region.contains("azure")) {
             provider = "staging.azure";
             region = region.replace("azure-","");
+        } else if (region.contains("eu-central-1")) {
+            provider = "aws"
         }
 
         // TODO: see if I can get this from cluster info

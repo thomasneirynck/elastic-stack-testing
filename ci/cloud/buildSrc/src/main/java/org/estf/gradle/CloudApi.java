@@ -107,7 +107,7 @@ public class CloudApi {
         regions.add("ap-northeast-1");
         regions.add("sa-east-1");
         regions.add("ap-southeast-2");
-        regions.add("aws-eu-central-1");
+        regions.add("eu-central-1");
         regions.add("gcp-us-central1");
         regions.add("gcp-europe-west-1");
         regions.add("azure-eastus2");
