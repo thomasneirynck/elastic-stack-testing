@@ -1108,6 +1108,8 @@ function run_xpack_ext_tests() {
 
   export TEST_BROWSER_HEADLESS=1
 
+  export DEBUG="puppeteer:*"
+   
   awk_exec="awk"
   if [[ "$Glb_OS" = "darwin" ]]; then
     awk_exec="gawk"
