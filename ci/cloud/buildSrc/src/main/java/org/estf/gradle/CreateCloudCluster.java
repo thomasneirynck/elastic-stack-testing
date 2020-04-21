@@ -208,6 +208,11 @@ public class CreateCloudCluster extends DefaultTask {
             .setResource(TopologySize.ResourceEnum.MEMORY)
             .build();
 
+        TopologySize kbnTopologySize = new TopologySizeBuilder()
+            .setValue(2048)
+            .setResource(TopologySize.ResourceEnum.MEMORY)
+            .build();
+
         int kibanaZone = 1;
         try {
             kibanaZone = Integer.parseInt(System.getenv("ESTF_CLOUD_KIBANA_ZONE"));
@@ -236,7 +241,7 @@ public class CreateCloudCluster extends DefaultTask {
         KibanaClusterTopologyElement kbnTopo = new KibanaClusterTopologyElementBuilder()
             .setInstanceConfigurationId(kbnConfigId)
             .setZoneCount(kibanaZone)
-            .setSize(topologySize)
+            .setSize(kbnTopologySize)
             .build();
 
         ElasticsearchScriptTypeSettings typeSetting = new ElasticsearchScriptTypeSettingsBuilder()

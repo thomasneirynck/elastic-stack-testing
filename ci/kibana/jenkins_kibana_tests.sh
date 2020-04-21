@@ -292,8 +292,14 @@ function get_kibana_pkg() {
     echo_error_exit "Unknown OS: $Glb_OS"
   fi
 
+  # The name of ES package is different in 6.8
+  _esPkgName="${_pkgName}"
+  if [[ "$Glb_Kibana_Version" == *"6.8"* ]]; then
+    _esPkgName=".zip"
+  fi
+
   Glb_Pkg_Name="kibana${_pkgType}-${Glb_Kibana_Version}-${_pkgName}"
-  Glb_Es_Pkg_Name="elasticsearch${_pkgType}-${Glb_Kibana_Version}-${_pkgName}"
+  Glb_Es_Pkg_Name="elasticsearch${_pkgType}-${Glb_Kibana_Version}-${_esPkgName}"
 
   readonly Glb_Pkg_Name Glb_Es_Pkg_Name
 }
