@@ -32,7 +32,7 @@ task get_kibana_repo {
 
     def grgit = Grgit.clone(dir: "$buildDir/kibana",
                             uri: 'git@github.com:' + github_owner + '/' + repo,
-                            refToCheckout: version)
+                            refToCheckout: version.minus('origin/')
     if (commit) {
         grgit.checkout(branch: commit)
     }
