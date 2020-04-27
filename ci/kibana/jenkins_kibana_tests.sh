@@ -197,8 +197,8 @@ function get_build_server() {
     echo_error_exit "Invalid build server: $Glb_Build_Server"
   fi
   if [[ "$Glb_Build_Server" == "staging" ]]; then
-    if [[ -z "$TEST_BUILD_ID" ]]; then
-      echo_error_exit "TEST_BUILD_ID must be populated!"
+    if [[ -z "$ESTF_BUILD_ID" ]]; then
+      echo_error_exit "ESTF_BUILD_ID must be populated!"
     fi
   fi
   readonly Glb_Build_Server
@@ -321,7 +321,7 @@ function get_kibana_url() {
 
   local _host="https://${Glb_Build_Server}.elastic.co"
   if [[ "$Glb_Build_Server" == "staging" ]]; then
-    _host=$_host/${TEST_BUILD_ID}
+    _host=$_host/${ESTF_BUILD_ID}
   fi
   local _path="downloads/kibana"
   local _es_path="downloads/elasticsearch"
