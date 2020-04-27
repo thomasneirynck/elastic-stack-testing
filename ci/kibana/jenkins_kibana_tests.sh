@@ -192,8 +192,14 @@ function get_build_server() {
     return
   fi
   Glb_Build_Server="${TEST_BUILD_SERVER:-"snapshots"}"
-  if ! [[ "$Glb_Build_Server" =~ ^(snapshots)$ ]]; then
+  if ! [[ "$Glb_Build_Server" =~ ^(snapshots)$ ]] &&
+     ! [[ "$Glb_Build_Server" =~ ^(staging)$ ]]; then
     echo_error_exit "Invalid build server: $Glb_Build_Server"
+  fi
+  if [[ "$Glb_Build_Server" == "staging" ]]; then
+    if [[ -z "$TEST_BUILD_ID" ]]; then
+      echo_error_exit "TEST_BUILD_ID must be populated!"
+    fi
   fi
   readonly Glb_Build_Server
 }
@@ -314,6 +320,9 @@ function get_kibana_url() {
   fi
 
   local _host="https://${Glb_Build_Server}.elastic.co"
+  if [[ "$Glb_Build_Server" == "staging" ]]; then
+    _host=$_host/${TEST_BUILD_ID}
+  fi
   local _path="downloads/kibana"
   local _es_path="downloads/elasticsearch"
 
