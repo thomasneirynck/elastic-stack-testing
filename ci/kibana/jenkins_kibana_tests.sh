@@ -301,7 +301,10 @@ function get_kibana_pkg() {
   # The name of ES package is different in 6.8
   _esPkgName="-${_pkgName}"
   if [[ "$Glb_Kibana_Version" == *"6.8"* ]]; then
-    _esPkgName=".zip"
+    _esPkgName=".tar.gz"
+    if [[ "$Glb_OS" = "windows" ]]; then
+      _esPkgName=".zip"
+    fi 
   fi
 
   Glb_Pkg_Name="kibana${_pkgType}-${Glb_Kibana_Version}-${_pkgName}"
