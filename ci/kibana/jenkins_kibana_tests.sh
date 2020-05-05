@@ -1307,7 +1307,7 @@ function run_visual_tests_oss() {
   export TEST_BROWSER_HEADLESS=1
 
   echo_info "Running oss visual tests"
-  yarn run percy exec -t 500 \
+  yarn run percy exec -t 500 -- -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom snapshot \
@@ -1329,7 +1329,7 @@ function run_visual_tests_default() {
   export TEST_BROWSER_HEADLESS=1
 
   echo_info "Running default visual tests"
-  yarn run percy exec -t 500 \
+  yarn run percy exec -t 500 -- -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom=snapshot \
