@@ -1333,7 +1333,7 @@ function run_visual_tests_default() {
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom=snapshot \
-    --config x-pack/test/visual_regression/config.js \
+    --config x-pack/test/visual_regression/config.ts \
     --debug
 }
 
