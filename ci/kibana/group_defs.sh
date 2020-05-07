@@ -6,6 +6,8 @@ ossGrp1="console
          management
          status_page
          timelion
+         bundles
+         saved_objects_management
         "
 
 ossGrp2="visualize
@@ -17,11 +19,12 @@ ossGrp3="dashboard
 xpackGrp1="advanced_settings
            apm
            canvas
-           code
            cross_cluster_replication
            grok_debugger
            index_lifecycle_management
            index_management
+           reporting_management
+           transform
            machine_learning
            license_management
           "
@@ -44,6 +47,7 @@ xpackGrp2="status_page
           "
 
 xpackGrp3="maps
+           lens
           "
 
 xpackGrp4="monitoring
@@ -53,6 +57,8 @@ xpackGrp4="monitoring
            security
            snapshot_restore
            spaces
+           api_keys
+           ingest_pipelines
           "
 
 xpackExtGrp1="reporting
