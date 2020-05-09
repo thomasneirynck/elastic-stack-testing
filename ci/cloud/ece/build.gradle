@@ -31,7 +31,7 @@ task getenv_var {
     assert(System.env.ESTF_KIBANA_VERSION &&
            System.env.ESTF_CLOUD_VERSION &&
            System.env.ESTF_BUILD_HASH)
-    ext.kibana_ver = System.env.ESTF_KIBANA_VERSION
+    ext.kibana_ver = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
     ext.cloud_ver =  System.env.ESTF_CLOUD_VERSION
     ext.build_hash = System.env.ESTF_BUILD_HASH
     ext.homedir = System.env.HOME

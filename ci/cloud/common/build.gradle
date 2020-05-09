@@ -27,12 +27,12 @@ task get_kibana_repo {
     println "In ${name}"
     def github_owner = System.env.ESTF_GITHUB_OWNER ?: "elastic"
     def repo = System.env.ESTF_GITHUB_REPO ?: "kibana.git"
-    def version = System.env.ESTF_KIBANA_VERSION
+    def version = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
     def commit = System.env.ESTF_KIBANA_COMMIT
 
     def grgit = Grgit.clone(dir: "$buildDir/kibana",
                             uri: 'git@github.com:' + github_owner + '/' + repo,
-                            refToCheckout: version.minus('origin/'))
+                            refToCheckout: version)
     if (commit) {
         grgit.checkout(branch: commit)
     }
