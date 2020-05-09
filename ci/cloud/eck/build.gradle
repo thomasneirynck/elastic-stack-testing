@@ -305,7 +305,7 @@ def waitForKibana() {
 task deploy_kibana_cluster() {
   doFirst {
     def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                  System.env.ESTF_KIBANA_VERSION + "/ci/cloud/eck/kbn-spec.yml"
+                  "${getenv_var['kibana_ver']}" + "/ci/cloud/eck/kbn-spec.yml"
     def fileCon = new URL(fileLoc).getText('UTF-8')
     File fp = new File("$projectDir/kbn-spec.yml")
     fp.write(fileCon)

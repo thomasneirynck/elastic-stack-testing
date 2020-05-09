@@ -398,7 +398,7 @@ task ecctl_create_deployment() {
     println "In ${name}"
     def match = ""
     def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                  System.env.ESTF_KIBANA_VERSION + "/ci/cloud/ece/ecePlan.json"
+                  "${getenv_var['kibana_ver']}" + "/ci/cloud/ece/ecePlan.json"
     def fileCon = new URL(fileLoc).getText('UTF-8')
     File fp = new File("$projectDir/ecePlan.json")
     fp.write(fileCon)

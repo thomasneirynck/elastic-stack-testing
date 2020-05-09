@@ -19,7 +19,7 @@ def genSetupTask(testname) {
         esUserSettings = System.env.ESTF_ES_USER_SETTINGS
         kibanaUserSettings = System.env.ESTF_KIBANA_USER_SETTINGS
         kibanaUserSettingsOverride = new URL("https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                                             System.env.ESTF_KIBANA_VERSION +
+                                             (System.env.ESTF_KIBANA_VERSION).minus('origin/') +
                                              "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
     }
 }
