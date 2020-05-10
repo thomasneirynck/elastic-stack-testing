@@ -32,7 +32,8 @@ task get_kibana_repo {
 
     // Workaround for cloud triggers coming in as master always
     def cloud_ver = System.env.ESTF_CLOUD_VERSION.split('-')[0].substring(0,3)
-    if (version != cloud_ver &&
+    if (cloud_ver != '8.0' &&
+        version != cloud_ver &&
         System.env.ESTF_KIBANA_VERSION.contains('origin/')) {
         version = cloud_ver
     }
