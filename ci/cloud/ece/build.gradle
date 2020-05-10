@@ -37,6 +37,13 @@ task getenv_var {
     ext.homedir = System.env.HOME
     ext.ver_whole = "$cloud_ver-$build_hash"
     ext.datadir = "$homedir/data"
+
+    // Workaround for cloud triggers coming in as master always
+    def cloud_ver_split = System.env.ESTF_CLOUD_VERSION.split('-')[0].substring(0,3)
+    if (ext.kibana_ver != cloud_ver_split &&
+        System.env.ESTF_KIBANA_VERSION.contains('origin/')) {
+        ext.kibana_ver = cloud_ver_split
+    }
   }
 }
 

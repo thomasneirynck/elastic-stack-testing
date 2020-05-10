@@ -14,13 +14,19 @@ import org.estf.gradle.UploadData
 // *********************************************************************************
 // Generate setup cloud cluster task
 def genSetupTask(testname) {
+    def version = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
+     // Workaround for cloud triggers coming in as master always
+    def cloud_ver = System.env.ESTF_CLOUD_VERSION.split('-')[0].substring(0,3)
+    if (version != cloud_ver &&
+        System.env.ESTF_KIBANA_VERSION.contains('origin/')) {
+        version = cloud_ver
+    }
     return tasks.create("setup_" + testname, CreateCloudCluster) {
         stackVersion = System.env.ESTF_CLOUD_VERSION
         esUserSettings = System.env.ESTF_ES_USER_SETTINGS
         kibanaUserSettings = System.env.ESTF_KIBANA_USER_SETTINGS
         kibanaUserSettingsOverride = new URL("https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                                             (System.env.ESTF_KIBANA_VERSION).minus('origin/') +
-                                             "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
+                                             version + "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
     }
 }
 
