@@ -19,7 +19,7 @@ echo "Download cloud java sdk"
 getReleaseByTagResponse=$(curl -H "Authorization: token ${ghToken}" -s ${getReleaseByTagUrl})
 assetName=$(curl -H "Authorization: token ${ghToken}" -s ${getReleaseByTagUrl} | python -c "import sys, json; print(json.load(sys.stdin)['assets'][0]['name'])")
 assetUrl=$(curl -H "Authorization: token ${ghToken}" -s ${getReleaseByTagUrl}  | python -c "import sys, json; print(json.load(sys.stdin)['assets'][0]['url'])")
-assetUrlWithAuth="${assetUrl}?access_token=${ghToken}"
+assetUrlWithAuth="${assetUrl}"
 downloadResponse=$(curl -L -H "Accept: application/octet-stream" ${assetUrlWithAuth} -o ${libsDir}/${assetName})
 
 echo "Download java vault driver"
