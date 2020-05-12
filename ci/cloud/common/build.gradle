@@ -30,14 +30,6 @@ task get_kibana_repo {
     def version = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
     def commit = System.env.ESTF_KIBANA_COMMIT
 
-    // Workaround for cloud triggers coming in as master always
-    def cloud_ver = System.env.ESTF_CLOUD_VERSION.split('-')[0].substring(0,3)
-    if (cloud_ver != '8.0' &&
-        version != cloud_ver &&
-        System.env.ESTF_KIBANA_VERSION.contains('origin/')) {
-        version = cloud_ver
-    }
-
     def grgit = Grgit.clone(dir: "$buildDir/kibana",
                             uri: 'git@github.com:' + github_owner + '/' + repo,
                             refToCheckout: version)

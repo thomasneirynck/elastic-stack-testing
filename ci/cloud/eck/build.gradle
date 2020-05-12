@@ -57,14 +57,6 @@ task getenv_var {
     ext.whole_ver = "$cloud_ver-$build_hash"
     ext.gcr_es = "gcr.io/$gc_project/elasticsearch:$whole_ver"
     ext.gcr_kbn = "gcr.io/$gc_project/kibana:$whole_ver"
-
-    // Workaround for cloud triggers coming in as master always
-    def cloud_ver_split = System.env.ESTF_CLOUD_VERSION.split('-')[0].substring(0,3)
-    if (cloud_ver_split != '8.0' &&
-        ext.kibana_ver != cloud_ver_split &&
-        System.env.ESTF_KIBANA_VERSION.contains('origin/')) {
-        ext.kibana_ver = cloud_ver_split
-    }
   }
 }
 
