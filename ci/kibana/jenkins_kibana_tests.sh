@@ -304,7 +304,7 @@ function get_kibana_pkg() {
     _esPkgName=".tar.gz"
     if [[ "$Glb_OS" = "windows" ]]; then
       _esPkgName=".zip"
-    fi 
+    fi
   fi
 
   Glb_Pkg_Name="kibana${_pkgType}-${Glb_Kibana_Version}-${_pkgName}"
@@ -518,6 +518,10 @@ function yarn_kbn_bootstrap() {
   if [ $Glb_YarnNetworkTimeout -eq 0 ]; then
     echo "network-timeout 600000" >> .yarnrc
   fi
+
+  # To deal with mismatched chrome versions on CI workers
+  export CHROMEDRIVER_FORCE_DOWNLOAD=true
+  export DETECT_CHROMEDRIVER_VERSION=true
 
   yarn kbn bootstrap --prefer-offline
 
