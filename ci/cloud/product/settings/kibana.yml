@@ -7,7 +7,7 @@ xpack.reporting.queue.pollInterval: 3000
 xpack.reporting.csv.maxSizeBytes: 2850
 xpack.security.encryptionKey: "wuGNaIhoMpk5sO4UBxgr3NyW1sFcLgIf"
 xpack.encryptedSavedObjects.encryptionKey: "DkdXazszSCYexXqz4YktBGHCRkV6hyNK"
-timelion.ui.enabled: true
+vis_type_timelion.ui.enabled: true
 xpack.reporting.csv.enablePanelActionDownload: true
 xpack.reporting.capture.maxAttempts: 1
 xpack.security.session.idleTimeout: 3600000
