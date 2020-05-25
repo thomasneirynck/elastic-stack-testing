@@ -58,7 +58,6 @@ xpackGrp4="monitoring
            snapshot_restore
            spaces
            api_keys
-           ingest_pipelines
           "
 
 xpackExtGrp1="reporting
