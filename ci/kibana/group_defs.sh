@@ -53,6 +53,7 @@ xpackGrp4="monitoring
            security
            snapshot_restore
            spaces
+           api_keys
           "
 
 xpackExtGrp1="reporting
