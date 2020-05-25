@@ -42,17 +42,22 @@ task get_kibana_repo {
 
 // *********************************************************************************
 task get_jenkins_exe (type: Copy) {
-    println "In ${name}"
-    from "$buildDir/../../../kibana"
-    into "$buildDir/kibana"
-    include "*.sh"
+    doFirst {
+        println "In ${name}"
+        from "$buildDir/../../../kibana"
+        into "$buildDir/kibana"
+        include "*.sh"
+    }
 }
 
 // *********************************************************************************
 task get_kibana_commit(type:Exec) {
-    println("---------- KIBANA REPO COMMIT INFO ----------")
-    workingDir "$buildDir/kibana"
-    commandLine 'git', 'log', '--pretty=oneline', '--abbrev-commit', '-n', '1'
+    doFirst {
+        print "In ${name}"
+        println("---------- KIBANA REPO COMMIT INFO ----------")
+        workingDir "$buildDir/kibana"
+        commandLine 'git', 'log', '--pretty=oneline', '--abbrev-commit', '-n', '1'
+    }
 }
 
 // *********************************************************************************
