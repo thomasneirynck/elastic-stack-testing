@@ -42,12 +42,10 @@ task get_kibana_repo {
 
 // *********************************************************************************
 task get_jenkins_exe (type: Copy) {
-    doFirst {
-        println "In ${name}"
-        from "$buildDir/../../../kibana"
-        into "$buildDir/kibana"
-        include "*.sh"
-    }
+    println "In ${name}"
+    from "$buildDir/../../../kibana"
+    into "$buildDir/kibana"
+    include "*.sh"
 }
 
 // *********************************************************************************
