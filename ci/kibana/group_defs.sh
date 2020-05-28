@@ -23,6 +23,7 @@ xpackGrp1="advanced_settings
            index_lifecycle_management
            index_management
            machine_learning
+           ml
            license_management
           "
 
