@@ -26,6 +26,7 @@ xpackGrp1="advanced_settings
            reporting_management
            transform
            machine_learning
+           ml
            license_management
           "
 
