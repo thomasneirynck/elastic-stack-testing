@@ -215,6 +215,11 @@ def waitForElasticsearch() {
 // *********************************************************************************
 task deploy_elasticsearch_cluster() {
   doFirst {
+    def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
+                  "${getenv_var['kibana_ver']}" + "/ci/cloud/eck/es-spec.yml"
+    def fileCon = new URL(fileLoc).getText('UTF-8')
+    File fp = new File("$projectDir/es-spec.yml")
+    fp.write(fileCon)
     updateSpec("$projectDir/es-spec.yml", "${getenv_var['gcr_es']}")
     def out = runShell("./kubectl apply -f" + "$projectDir/es-spec.yml",
                        "$projectDir")
