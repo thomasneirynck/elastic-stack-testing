@@ -14,7 +14,7 @@ spec:
       node.ingest: false
       node.ml: false
       xpack.ml.enabled: true
-      cluster.remote.connect: false
+      node.remote_cluster_client: false
     podTemplate:
       spec:
         initContainers:
@@ -29,7 +29,7 @@ spec:
       node.data: true
       node.ingest: true
       node.ml: true
-      cluster.remote.connect: false
+      node.remote_cluster_client: false
     podTemplate:
       spec:
         initContainers:
