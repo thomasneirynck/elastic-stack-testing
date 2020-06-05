@@ -242,6 +242,7 @@ function get_os() {
   if [[ "$_uname" = *"MINGW64_NT"* ]]; then
     Glb_OS="windows"
   elif [[ "$_uname" = "Darwin" ]]; then
+    export SELENIUM_REMOTE_URL="http://localhost:4444/wd/hub"
     Glb_OS="darwin"
     #TODO: remove later
     Glb_KbnClean="yes"
