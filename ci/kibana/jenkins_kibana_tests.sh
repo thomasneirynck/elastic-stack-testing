@@ -1271,12 +1271,19 @@ function run_cloud_xpack_ext_tests() {
   cfgs="test/functional/config.js
         test/reporting/configs/chromium_api.js
         test/reporting/configs/chromium_functional.js
+        test/reporting_api_integration/config.js
         test/api_integration/config.js
+        test/api_integration/config.ts
        "
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     for cfg in $cfgs; do
       if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
+        continue
+      fi
+      if [ ! -f $cfg ]; then
+        echo "Warning invalid configuration: $cfg"
         continue
       fi
       export ESTF_RUN_NUMBER=$i
