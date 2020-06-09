@@ -28,11 +28,20 @@ task get_kibana_repo {
     def github_owner = System.env.ESTF_GITHUB_OWNER ?: "elastic"
     def repo = System.env.ESTF_GITHUB_REPO ?: "kibana.git"
     def version = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
-    def commit = System.env.ESTF_KIBANA_COMMIT
+    def branch = System.env.ESTF_GITHUB_BRANCH
+    def commit = System.env.ESTF_GITHUB_COMMIT
 
+    def checkout_ver = version
+
+    if (github_owner != "elastic" && !branch) {
+       throw new GradleException("ESTF_GITHUB_BRANCH must be specified")
+    }
+    if (branch) {
+      checkout_ver = branch
+    }
     def grgit = Grgit.clone(dir: "$buildDir/kibana",
                             uri: 'git@github.com:' + github_owner + '/' + repo,
-                            refToCheckout: version)
+                            refToCheckout: checkout_ver)
     if (commit) {
         grgit.checkout(branch: commit)
     }
