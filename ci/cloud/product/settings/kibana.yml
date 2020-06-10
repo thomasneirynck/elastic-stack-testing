@@ -1,4 +1,5 @@
 home.disableWelcomeScreen: true
+xpack.ingestManager.enabled: true
 telemetry.banner: false
 server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 xpack.maps.showMapsInspectorAdapter: true
