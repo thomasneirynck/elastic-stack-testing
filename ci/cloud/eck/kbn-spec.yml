@@ -8,7 +8,6 @@ spec:
   count: 1
   config:
     home.disableWelcomeScreen: true
-    xpack.ingestManager.enabled: true
     server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
     vis_type_timelion.ui.enabled: true
     xpack.encryptedSavedObjects.encryptionKey: DkdXazszSCYexXqz4YktBGHCRkV6hyNK
