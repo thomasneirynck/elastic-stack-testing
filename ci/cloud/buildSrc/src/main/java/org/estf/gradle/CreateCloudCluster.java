@@ -103,20 +103,23 @@ public class CreateCloudCluster extends DefaultTask {
         String es_cfg = "aws.highio.classic";
         String kbn_cfg = "aws.kibana.classic";
         String ml_cfg = "aws.ml.m5";
+        String ingest_cfg = "aws.coordinating.m5";
         String data_region = System.getenv("ESTF_CLOUD_REGION");
         if (data_region != null) {
             if (data_region.contains("gcp")) {
                 es_cfg = "gcp.highio.classic";
                 kbn_cfg = "gcp.kibana.classic";
                 ml_cfg = "gcp.ml.1";
+                ingest_cfg = "gcp.coodrinating.1";
             } else if (data_region.contains("azure")) {
-                es_cfg = "master";
-                kbn_cfg = "kibana";
-                ml_cfg = "ml";
+                es_cfg = "azure.master.e32sv3";
+                kbn_cfg = "azure.kibana.e32sv3";
+                ml_cfg = "azure.ml.d64sv3";
+                ingest_cfg = "azure.coordinating.d64sv3";
             }
         }
 
-        ClusterCrudResponse response = clusterClient.createEsCluster(createClusterRequest(es_cfg, kbn_cfg, ml_cfg));
+        ClusterCrudResponse response = clusterClient.createEsCluster(createClusterRequest(es_cfg, kbn_cfg, ml_cfg, ingest_cfg));
         ClustersKibanaApi kbnApi = new ClustersKibanaApi(cloudApi.getApiClient());
         Waiter.waitFor(() -> cloudApi.isKibanaRunning(
             kbnApi.getKibanaCluster(response.getKibanaClusterId(), false, true, false, false)
@@ -198,7 +201,8 @@ public class CreateCloudCluster extends DefaultTask {
         return jsonRequest;
     }
 
-    private CreateElasticsearchClusterRequest createClusterRequest(String esConfigId, String kbnConfigId, String mlConfigId) {
+    private CreateElasticsearchClusterRequest createClusterRequest(String esConfigId, String kbnConfigId,
+                                                                   String mlConfigId, String ingestConfigId) {
 
         TopologySize topologySize = new TopologySizeBuilder()
             .setValue(1024)
@@ -214,6 +218,8 @@ public class CreateCloudCluster extends DefaultTask {
 
         ElasticsearchNodeType esNodeType = new ElasticsearchNodeTypeBuilder().setData(true).setMaster(true).build();
 
+        ElasticsearchNodeType ingestNodeType = new ElasticsearchNodeTypeBuilder().setIngest(true).build();
+
         ElasticsearchNodeType mlNodeType = new ElasticsearchNodeTypeBuilder().setMl(true).build();
 
         ElasticsearchClusterTopologyElement esTopo = new ElasticsearchClusterTopologyElementBuilder()
@@ -223,11 +229,18 @@ public class CreateCloudCluster extends DefaultTask {
             .setSize(topologySize)
             .build();
 
+        ElasticsearchClusterTopologyElement ingestTopo = new ElasticsearchClusterTopologyElementBuilder()
+            .setInstanceConfigurationId(ingestConfigId)
+            .setNodeType(ingestNodeType)
+            .setZoneCount(1)
+            .setSize(topologySize)
+            .build();
+
         ElasticsearchClusterTopologyElement mlTopo = new ElasticsearchClusterTopologyElementBuilder()
             .setInstanceConfigurationId(mlConfigId)
             .setNodeType(mlNodeType)
             .setZoneCount(1)
-            .setSize(topologySize)
+            .setSize(kbnTopologySize)
             .build();
 
         KibanaClusterTopologyElement kbnTopo = new KibanaClusterTopologyElementBuilder()
@@ -273,7 +286,7 @@ public class CreateCloudCluster extends DefaultTask {
 
         ElasticsearchClusterPlan plan = new ElasticsearchClusterPlanBuilder()
             .setElasticsearch(esCfg)
-            .setClusterTopology(Arrays.asList(esTopo, mlTopo))
+            .setClusterTopology(Arrays.asList(esTopo, mlTopo, ingestTopo))
             .build();
 
         KibanaClusterPlan kbnPlan = new KibanaClusterPlanBuilder()
