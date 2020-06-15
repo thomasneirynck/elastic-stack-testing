@@ -213,7 +213,7 @@ public class CreateCloudCluster extends DefaultTask {
             .build();
 
         TopologySize kbnTopologySize = new TopologySizeBuilder()
-            .setValue(2048)
+            .setValue(1024)
             .setResource(TopologySize.ResourceEnum.MEMORY)
             .build();
 
