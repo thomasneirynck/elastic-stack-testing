@@ -22,6 +22,10 @@ def genSetupTask(testname) {
         kibanaUserSettings = System.env.ESTF_KIBANA_USER_SETTINGS
         kibanaUserSettingsOverride = new URL("https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
                                              version + "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
+        if (System.env.JOB == "xpackGrp3") {
+            mlTesting = true
+            kbnReportsTesting = true
+        }
     }
 }
 

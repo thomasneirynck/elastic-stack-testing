@@ -18,15 +18,13 @@ ossGrp3="dashboard
 
 xpackGrp1="advanced_settings
            apm
-           canvas
            cross_cluster_replication
            grok_debugger
            index_lifecycle_management
            index_management
            reporting_management
            transform
-           machine_learning
-           ml
+           maps
            license_management
           "
 
@@ -40,15 +38,16 @@ xpackGrp2="status_page
            logstash
            graph
            discover
-           dashboard
+           lens
            dashboard_mode
            canvas
            dev_tools
            infra
           "
 
-xpackGrp3="maps
-           lens
+xpackGrp3="dashboard
+           machine_learning
+           ml
           "
 
 xpackGrp4="monitoring
@@ -62,6 +61,7 @@ xpackGrp4="monitoring
           "
 
 xpackExtGrp1="reporting
+              reporting_api_integration
               api_integration
               alerting_api_integration
               plugin_api_integration
