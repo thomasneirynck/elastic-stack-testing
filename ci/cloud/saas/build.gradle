@@ -24,7 +24,10 @@ def genSetupTask(testname) {
                                              version + "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
         if (System.env.JOB == "xpackGrp3") {
             mlTesting = true
+            ingestNodeTesting = true
             kbnReportsTesting = true
+        } else if (System.env.JOB == "xpackExt") {
+            mlTesting = true
         }
     }
 }

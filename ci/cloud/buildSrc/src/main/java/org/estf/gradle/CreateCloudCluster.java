@@ -86,6 +86,9 @@ public class CreateCloudCluster extends DefaultTask {
     boolean mlTesting = false;
 
     @Input
+    boolean ingestNodeTesting = false;
+
+    @Input
     boolean kbnReportsTesting = false;
 
     String clusterId;
@@ -308,10 +311,15 @@ public class CreateCloudCluster extends DefaultTask {
         KibanaConfiguration kbnCfg = kbnCfgBld.build();
 
         ElasticsearchClusterPlan plan;
-        if (mlTesting) {
+        if (mlTesting && ingestNodeTesting) {
             plan = new ElasticsearchClusterPlanBuilder()
                 .setElasticsearch(esCfg)
                 .setClusterTopology(Arrays.asList(esTopo, mlTopo, ingestTopo))
+                .build();
+        } else if (mlTesting) {
+            plan = new ElasticsearchClusterPlanBuilder()
+                .setElasticsearch(esCfg)
+                .setClusterTopology(Arrays.asList(esTopo, mlTopo))
                 .build();
         } else {
             plan = new ElasticsearchClusterPlanBuilder()
