@@ -48,6 +48,7 @@ import co.elastic.cloud.api.model.generated.KibanaClusterTopologyElement;
 import co.elastic.cloud.api.model.generated.KibanaConfiguration;
 import co.elastic.cloud.api.model.generated.TopologySize;
 import co.elastic.cloud.api.util.Waiter;
+import java.time.Duration;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import org.gradle.api.DefaultTask;
@@ -127,6 +128,9 @@ public class CreateCloudCluster extends DefaultTask {
                 ingest_cfg = "azure.coordinating.d64sv3";
             }
         }
+
+        // Set timeout
+        Waiter.setWait(Duration.ofMinutes(20));
 
         ClusterCrudResponse response = clusterClient.createEsCluster(createClusterRequest(es_cfg, kbn_cfg, ml_cfg, ingest_cfg));
         ClustersKibanaApi kbnApi = new ClustersKibanaApi(cloudApi.getApiClient());
