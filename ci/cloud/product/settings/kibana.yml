@@ -1,3 +1,4 @@
+logging.verbose: true
 home.disableWelcomeScreen: true
 telemetry.banner: false
 server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
