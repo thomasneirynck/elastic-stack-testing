@@ -1,3 +1,4 @@
+logging.verbose: true
 home.disableWelcomeScreen: true
 xpack.ingestManager.enabled: true
 telemetry.banner: false
