@@ -7,6 +7,7 @@ spec:
   version: <version>
   count: 1
   config:
+    logging.verbose: true
     home.disableWelcomeScreen: true
     server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
     vis_type_timelion.ui.enabled: true
