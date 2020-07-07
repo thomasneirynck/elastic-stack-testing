@@ -29,6 +29,15 @@ def genSetupTask(testname) {
         } else if (System.env.JOB == "xpackExt") {
             mlTesting = true
         }
+        if (System.env.ESTF_ML_TESTING) {
+            mlTesting = true
+        }
+        if (System.env.ESTF_INGEST_NODE_TESTING) {
+            ingestNodeTesting = true
+        }
+        if (System.env.ESTF_KIBANA_REPORTS_TESTING) {
+            kbnReportsTesting = true
+        }
     }
 }
 
