@@ -107,6 +107,13 @@ def handle_special_case_shards(legacy_doc, metricbeat_doc):
     if 'relocating_node' in legacy_doc['shard'] and legacy_doc['shard']['relocating_node'] == None:
         legacy_doc['shard'].pop('relocating_node')
 
+def handle_special_case_index_stats(legacy_doc, metricbeat_doc):
+  # Beats merged a fix for https://github.com/elastic/beats/issues/18639 before Elasticsearch merged
+  # a fix for https://github.com/elastic/elasticsearch/issues/56949 so we need to explicitly disable
+  # this check, as the tests will continue to fail until the Elasticsearch issue is resolved.
+  if 'hidden' in metricbeat_doc['index_stats'] and 'hidden' not in legacy_doc['index_stats']:
+    legacy_doc['index_stats']['hidden'] = metricbeat_doc['index_stats']['hidden']
+
 def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
     if doc_type == "index_recovery":
         handle_special_case_index_recovery(legacy_doc, metricbeat_doc)
@@ -116,5 +123,7 @@ def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
         handle_special_case_node_stats(legacy_doc, metricbeat_doc)
     if doc_type == 'shards':
         handle_special_case_shards(legacy_doc, metricbeat_doc)
+    if doc_type == 'index_stats':
+        handle_special_case_index_stats(legacy_doc, metricbeat_doc)
 
 check_parity(handle_special_cases)
