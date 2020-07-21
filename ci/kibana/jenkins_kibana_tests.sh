@@ -1290,10 +1290,13 @@ function run_cloud_xpack_ext_tests() {
       update_report_name $cfg
 
       echo " -> Running cloud xpack ext tests config: $cfg, run $i of $maxRuns"
+      # For NODE_TLS, see https://github.com/elastic/kibana/issues/72193
+      export NODE_TLS_REJECT_UNAUTHORIZED=0
       node ../scripts/functional_test_runner \
         --config $cfg \
         --exclude-tag skipCloud \
         --debug
+      unset NODE_TLS_REJECT_UNAUTHORIZED
       if [ $? -ne 0 ]; then
         failures=1
       fi
