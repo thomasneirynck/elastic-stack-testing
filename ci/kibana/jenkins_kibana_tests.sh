@@ -1267,6 +1267,9 @@ function run_cloud_xpack_ext_tests() {
 
   export TEST_BROWSER_HEADLESS=1
 
+  # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
+  export TEST_CLOUD=1
+
   # Note: Only the following tests run on cloud at this time
   cfgs="test/functional/config.js
         test/reporting/configs/chromium_api.js
