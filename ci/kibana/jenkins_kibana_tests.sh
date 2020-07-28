@@ -1189,6 +1189,8 @@ function run_cloud_oss_tests() {
   update_test_files
 
   export TEST_BROWSER_HEADLESS=1
+  # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
+  export TEST_CLOUD=1
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
@@ -1227,6 +1229,8 @@ function run_cloud_xpack_func_tests() {
   cd "$_xpack_dir"
 
   export TEST_BROWSER_HEADLESS=1
+  # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
+  export TEST_CLOUD=1
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
