@@ -32,7 +32,6 @@ xpackGrp2="status_page
            timelion
            upgrade_assistant
            uptime
-           visualize
            watcher
            index_patterns
            logstash
@@ -46,6 +45,7 @@ xpackGrp2="status_page
           "
 
 xpackGrp3="dashboard
+           visualize
            machine_learning
            ml
           "
