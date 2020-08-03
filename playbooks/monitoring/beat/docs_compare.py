@@ -11,14 +11,15 @@ def handle_special_case_beats_stats(legacy_doc, metricbeat_doc):
   # we expect the _number_ of files being harvested by Filebeat in either case to match. 
   # If the numbers match we normalize the file lists in `type:beats_stats` docs collected
   # by both methods so their parity comparison succeeds.
-  legacy_files = legacy_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"]
-  metricbeat_files = metricbeat_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"]
+  if 'files' in legacy_doc["beats_stats"]["metrics"]["filebeat"]["harvester"] or 'files' in metricbeat_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]:
+    legacy_files = legacy_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"]
+    metricbeat_files = metricbeat_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"]
 
-  if len(legacy_files) != len(metricbeat_files):
-    return
+    if len(legacy_files) != len(metricbeat_files):
+      return
 
-  legacy_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"] = []
-  metricbeat_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"] = []
+    legacy_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"] = []
+    metricbeat_doc["beats_stats"]["metrics"]["filebeat"]["harvester"]["files"] = []
 
 def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
   if doc_type == "beats_stats":
