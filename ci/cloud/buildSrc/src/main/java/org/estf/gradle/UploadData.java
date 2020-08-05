@@ -80,7 +80,6 @@ public class UploadData extends DefaultTask {
         uploadBankAccountData();
         createBankIndexPatternAsDefault();
         loadSampleData();
-
     }
 
     public void uploadBankAccountData() throws IOException {
@@ -222,7 +221,7 @@ public class UploadData extends DefaultTask {
         dataList.add("s/automation/api/sample_data/flights");
         String creds = username + ":" + password;
         String basicAuthPayload = "Basic " + Base64.getEncoder().encodeToString(creds.getBytes());
-	for (int i = 0; i < dataList.size(); i++) {
+        for (int i = 0; i < dataList.size(); i++) {
             HttpPost postRequest = new HttpPost(kbnBaseUrl + "/" + dataList.get(i));
             postRequest.setHeader(HttpHeaders.AUTHORIZATION, basicAuthPayload);
             postRequest.setHeader("kbn-xsrf", "automation");

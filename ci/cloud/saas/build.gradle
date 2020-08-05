@@ -20,8 +20,12 @@ def genSetupTask(testname) {
         stackVersion = System.env.ESTF_CLOUD_VERSION
         esUserSettings = System.env.ESTF_ES_USER_SETTINGS
         kibanaUserSettings = System.env.ESTF_KIBANA_USER_SETTINGS
-        kibanaUserSettingsOverride = new URL("https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                                             version + "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
+        try {
+            kibanaUserSettingsOverride = new URL("https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
+                                                  version + "/ci/cloud/product/settings/kibana.yml").getText('UTF-8')
+        } catch(Exception ex) {
+            // Catch the block
+        }
         if (System.env.JOB == "xpackGrp3") {
             mlTesting = true
             ingestNodeTesting = true
@@ -127,18 +131,19 @@ task saas_cleanup {
 // *********************************************************************************
 task upload_bank_data(type: UploadData) {
     doFirst {
-        esBaseUrl = rootProject.props.elasticsearch_url
-        kbnBaseUrl = rootProject.props.kibana_url
-        username = rootProject.props.es_username
-        password = rootProject.props.es_password
+        esBaseUrl = rootProject.ext.props.elasticsearch_url
+        kbnBaseUrl = rootProject.ext.props.kibana_url
+        username = rootProject.ext.props.es_username
+        password = rootProject.ext.props.es_password
     }
 }
 
 // *********************************************************************************
-task saas_upgrade_run_kibana_tests {
+task saas_upgrade {
     rootProject.ext.test_task = "${name}"
     doFirst {
         // Upload data
+        println("---------- UPLOAD BANK DATA ----------")
         upload_bank_data.execute()
 
         // Upgrade cloud cluster

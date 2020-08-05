@@ -359,6 +359,9 @@ run_tests() {
 
 # ----------------------------------------------------------------------------
 run_cloud_tests() {
+  if [ ! -z $ESTF_UPGRADE_CLOUD_VERSION ]; then
+    export TASK=saas_upgrade_run_kibana_tests
+  fi
   if [ -z $TASK ]; then
     echo_error "Gradle task name must be supplied"
     exit 1
@@ -370,7 +373,6 @@ run_cloud_tests() {
     echo_error "Tests failed!"
     exit 1
   fi
-
 }
 
 deactivate_python_virtual_env() {
