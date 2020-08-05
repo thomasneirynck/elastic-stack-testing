@@ -4,8 +4,6 @@ server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 telemetry.banner: false
 timelion.ui.enabled: true
 xpack.encryptedSavedObjects.encryptionKey: "DkdXazszSCYexXqz4YktBGHCRkV6hyNK"
-xpack.endpoint.alertResultListDefaultDateRange.from: 2018-01-10T00:00:00.000Z
-xpack.endpoint.enabled: true
 xpack.ingestManager.enabled: true
 xpack.maps.preserveDrawingBuffer: true
 xpack.maps.showMapsInspectorAdapter: true
