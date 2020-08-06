@@ -37,7 +37,6 @@ xpackGrp2="status_page
            logstash
            graph
            discover
-           lens
            dashboard_mode
            canvas
            dev_tools
@@ -46,6 +45,7 @@ xpackGrp2="status_page
 
 xpackGrp3="dashboard
            visualize
+           lens
            machine_learning
            ml
           "
