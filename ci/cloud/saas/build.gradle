@@ -139,7 +139,7 @@ task upload_bank_data(type: UploadData) {
 }
 
 // *********************************************************************************
-task saas_upgrade {
+task saas_upgrade_run_kibana_tests {
     rootProject.ext.test_task = "${name}"
     doFirst {
         // Upload data
