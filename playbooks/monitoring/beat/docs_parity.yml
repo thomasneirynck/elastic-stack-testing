@@ -40,13 +40,13 @@
         elasticsearch_config_params: {"xpack.monitoring.collection.enabled: true"}
         ait_role: xpack_elasticsearch_install_gencert_config_start_verify
 
-    - name: Run filebeat with legacy collection
+    - name: Run filebeat with internal collection
       include_role:
         name: xpack_filebeat
       vars:
         ait_role: xpack_filebeat_install_config_start_verify
         filebeat_config_params: |
-          xpack.monitoring.enabled: true
+          monitoring.enabled: true
 
     - name: Wait for filebeat to index a few monitoring documents
       wait_for:
