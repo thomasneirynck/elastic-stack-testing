@@ -50,6 +50,9 @@ readonly Glb_Cache_Dir
 Glb_KbnBootStrapped="no"
 Glb_KbnClean="no"
 
+Glb_KbnSkipUbi="no"
+readonly Glb_KbnSkipUbi
+
 # *****************************************************************************
 # SECTION: Logging functions
 # *****************************************************************************
@@ -231,6 +234,22 @@ function get_version() {
 }
 
 # ----------------------------------------------------------------------------
+# Method to get branch from Kibana package.json file
+# ----------------------------------------------------------------------------
+function get_branch() {
+  if [ ! -z $Glb_Kibana_Branch ]; then
+    return
+  fi
+  Glb_Kibana_Branch="$(cat package.json | \
+                      grep "\"branch\"" | \
+                      cut -d ':' -f 2 | \
+                      tr -d ",\"\ +" | \
+                      xargs)"
+
+  readonly Glb_Kibana_Branch
+}
+
+# ----------------------------------------------------------------------------
 # Method to get OS
 # ----------------------------------------------------------------------------
 function get_os() {
@@ -238,6 +257,9 @@ function get_os() {
     return
   fi
   local _uname=$(uname)
+  if [[ ! -z $TEST_KIBANA_DOCKER ]]; then
+    _uname="Docker"
+  fi
   echo_debug "Uname: $_uname"
   if [[ "$_uname" = *"MINGW64_NT"* ]]; then
     Glb_OS="windows"
@@ -248,6 +270,8 @@ function get_os() {
     Glb_KbnClean="yes"
   elif [[ "$_uname" = "Linux" ]]; then
     Glb_OS="linux"
+  elif [[ "$_uname" = "Docker" ]]; then
+    Glb_OS="docker"
   else
     echo_error_exit "Unknown OS: $_uname"
   fi
@@ -270,14 +294,17 @@ function get_kibana_pkg() {
   local _splitStr=(${Glb_Kibana_Version//./ })
   local _version=${_splitStr[0]}.${_splitStr[1]}
   local _isOssSupported=$(echo "$_version 6.3" | awk '{print ($1 >= $2)}')
+  local _isUbiSupported=$(echo "$_version 7.10" | awk '{print ($1 >= $2)}')
 
   # Package type
   local _pkgType="${TEST_KIBANA_BUILD:-"oss"}"
-  if ! [[ "$_pkgType" =~ ^(oss|default)$ ]]; then
+  if ! [[ "$_pkgType" =~ ^(oss|default|ubi8)$ ]]; then
     echo_error_exit "Unknown build type: $_pkgType"
   fi
   if [[ "$_pkgType" == "oss" && $_isOssSupported == 1 ]]; then
     _pkgType="-oss"
+  elif [[ "$_pkgType" = "ubi8" && $_isUbiSupported == 1 && $Glb_KbnSkipUbi == "no" ]]; then
+    _pkgType="-ubi8"
   else
     _pkgType=""
   fi
@@ -295,6 +322,8 @@ function get_kibana_pkg() {
     _pkgName="darwin-x86_64.tar.gz"
   elif [[ "$Glb_OS" = "linux" ]]; then
     _pkgName="linux-x86_64.tar.gz"
+  elif [[ "$Glb_OS" = "docker" ]]; then
+    _pkgName="docker-image.tar.gz"
   else
     echo_error_exit "Unknown OS: $Glb_OS"
   fi
@@ -310,6 +339,11 @@ function get_kibana_pkg() {
 
   Glb_Pkg_Name="kibana${_pkgType}-${Glb_Kibana_Version}-${_pkgName}"
   Glb_Es_Pkg_Name="elasticsearch${_pkgType}-${Glb_Kibana_Version}${_esPkgName}"
+
+  export DOCKER_ES_IMG_NAME="elasticsearch${_pkgType}"
+  export DOCKER_ES_IMG_TAG="${Glb_Kibana_Version}"
+  export DOCKER_KB_IMG_NAME="kibana${_pkgType}"
+  export DOCKER_KB_IMG_TAG="${Glb_Kibana_Version}"
 
   readonly Glb_Pkg_Name Glb_Es_Pkg_Name
 }
@@ -436,7 +470,7 @@ function install_node() {
   elif [[ "$Glb_OS" == "darwin" ]]; then
     _nodeBin="$_nodeDir/bin"
     _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-darwin-x64.tar.gz"
-  elif [[ "$Glb_OS" == "linux" ]]; then
+  elif [[ "$Glb_OS" == "linux" ||  "$Glb_OS" == "docker" ]]; then
     _nodeBin="$_nodeDir/bin"
     _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-linux-x64.tar.gz"
   else
@@ -1356,6 +1390,319 @@ function run_visual_tests_default() {
     --debug
 }
 
+# -----------------------------------------------------------------------------
+# Run with timeout
+# -----------------------------------------------------------------------------
+function run_with_timeout {
+  cmd="$1"; timeout="$2";
+  grep -qP '^\d+$' <<< $timeout || timeout=10
+  (
+    eval "$cmd" &
+    child=$!
+    trap -- "" SIGTERM
+    (
+      sleep $timeout
+      kill $child 2> /dev/null
+    ) &
+    wait $child
+  )
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_es_ready() {
+  while true; do
+    docker logs es01 | grep -E -i -w 'to \[GREEN\].*elasticsearch'
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_es_ready {
+  local timeout=${1:-40}
+  run_with_timeout _wait_for_es_ready $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Elasticsearch server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_kbn_ready {
+  while true; do
+    docker logs kib01 | grep -E -i -w 'Kibana.*http server running at'
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_kbn_ready {
+  local timeout=${1:-90}
+  run_with_timeout _wait_for_kbn_ready $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Kibana server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method docker load
+# -----------------------------------------------------------------------------
+function docker_load {
+  local type=${1:-oss}
+
+  get_build_server
+  get_version
+  get_os
+  get_branch
+  get_kibana_pkg
+  get_kibana_url
+
+  echo_info $Glb_Kibana_Url
+  echo_info $Glb_Es_Url
+
+  echo_info "Run docker elasticsearch load..."
+  curl -s "${Glb_Es_Url}" | docker load -i /dev/stdin
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Failed to load elasticsearch docker"
+  fi
+
+  echo_info "Run docker kibana load..."
+  curl -s "${Glb_Kibana_Url}" | docker load -i /dev/stdin
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Failed to load kibana docker"
+  fi
+
+  if [ "$type" == "oss" ]; then
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/oss/docker-compose.yml --output docker-compose.yml
+
+    echo_info "Run docker compose up..."
+    docker-compose up -d
+    if [ $? -ne 0 ]; then
+        echo_error_exit "Docker compose up failed"
+    fi
+    wait_for_es_ready
+    wait_for_kbn_ready
+
+    export TEST_KIBANA_PROTOCOL=http
+    export TEST_KIBANA_PORT=5601
+    export TEST_ES_PROTOCOL=http
+    export TEST_ES_PORT=9200
+
+  else
+
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/cloud/product/settings/kibana.yml --output kibana.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/create-certs.yml --output create-certs.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/elastic-docker-tls.yml --output elastic-docker-tls.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/instances.yml --output instances.yml
+
+    export COMPOSE_PROJECT_NAME=es
+    export CERTS_DIR=/usr/share/elasticsearch/config/certificates
+
+    echo_info "Run docker compose run for cert setup..."
+    docker-compose -f create-certs.yml run --rm create_certs
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose create certs failed"
+    fi
+
+    echo_info "Run docker compose up for passwords setup..."
+    docker-compose -f elastic-docker-tls.yml up -d
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose failed"
+    fi
+
+    echo_info "Run setup passwords..."
+    docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords auto --batch \
+                                   --url https://localhost:9200 > passwords.txt"
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Elasticsearch setup passwords failed"
+    fi
+
+    espw=$(docker exec es01 /bin/bash -c "grep \"PASSWORD elastic\" passwords.txt" | awk '{print $4}')
+    kbnpw=$(docker exec es01 /bin/bash -c "grep \"PASSWORD kibana_system\" passwords.txt" | awk '{print $4}')
+
+    echo_info "Run docker compose stop..."
+    docker-compose stop
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose stop failed"
+    fi
+
+    echo_info "Run docker compose up..."
+    sed -i "s/CHANGEME/$kbnpw/g" elastic-docker-tls.yml
+    docker-compose -f elastic-docker-tls.yml up -d
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose up failed"
+    fi
+    wait_for_es_ready
+    wait_for_kbn_ready
+
+    export TEST_KIBANA_PROTOCOL=https
+    export TEST_KIBANA_PORT=5601
+    export TEST_KIBANA_USER=elastic
+    export TEST_KIBANA_PASS=$espw
+    export TEST_ES_PROTOCOL=https
+    export TEST_ES_PORT=9200
+    export TEST_ES_USER=elastic
+    export TEST_ES_PASS=$espw
+    export NODE_TLS_REJECT_UNAUTHORIZED=0
+    export TEST_IGNORE_CERT_ERRORS=1
+
+  fi
+
+}
+
+# -----------------------------------------------------------------------------
+# Method to run oss tests from Kibana repo, ones in test/ directory for docker
+# -----------------------------------------------------------------------------
+function run_docker_oss_tests() {
+  echo_info "In run_docker_oss_tests"
+  local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  TEST_KIBANA_BUILD=oss
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+  includeTags=$(update_config "test/functional/config.js" $testGrp)
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "oss"
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running docker oss functional tests, run $i of $maxRuns"
+    eval node scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker OSS Test failed!"
+}
+
+# -----------------------------------------------------------------------------
+# Method to run docker xpack tests
+# -----------------------------------------------------------------------------
+function run_docker_xpack_func_tests() {
+  echo_info "In run_docker_xpack_func_tests"
+  local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  TEST_KIBANA_BUILD=echo $(random_docker_image)
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+
+  includeTags=$(update_config "x-pack/test/functional/config.js" $testGrp)
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "x-pack"
+
+  local _xpack_dir="$(cd x-pack; pwd)"
+  echo_info "-> XPACK_DIR ${_xpack_dir}"
+  cd "$_xpack_dir"
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running cloud xpack func tests, run $i of $maxRuns"
+    eval node ../scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker X-Pack Test failed!"
+}
+
+# -----------------------------------------------------------------------------
+# Method to run docker xpack tests
+# -----------------------------------------------------------------------------
+function run_docker_xpack_ext_tests() {
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  echo_info "In run_docker_xpack_ext_tests"
+  local funcTests="${1:- false}"
+
+  TEST_KIBANA_BUILD=echo $(random_docker_image)
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "x-pack"
+
+  local _xpack_dir="$(cd x-pack; pwd)"
+  echo_info "-> XPACK_DIR ${_xpack_dir}"
+  cd "$_xpack_dir"
+
+  cfgs="test/functional/config.js
+        test/reporting/configs/chromium_api.js
+        test/reporting/configs/chromium_functional.js
+        test/reporting_api_integration/config.js
+        test/api_integration/config.js
+        test/api_integration/config.ts
+       "
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    for cfg in $cfgs; do
+      if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
+        continue
+      fi
+      if [ ! -f $cfg ]; then
+        echo "Warning invalid configuration: $cfg"
+        continue
+      fi
+      export ESTF_RUN_NUMBER=$i
+      update_report_name $cfg
+
+      echo " -> Running docker xpack ext tests config: $cfg, run $i of $maxRuns"
+      node ../scripts/functional_test_runner \
+        --config $cfg \
+        --debug
+      if [ $? -ne 0 ]; then
+        failures=1
+      fi
+    done
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker X-Pack Ext Test failed!"
+}
+
 # *****************************************************************************
 # SECTION: Test grouping functions
 # *****************************************************************************
@@ -1494,6 +1841,17 @@ function join_by {
   echo "$*"
 }
 
+# -----------------------------------------------------------------------------
+# Random docker image testing
+# -----------------------------------------------------------------------------
+function random_docker_image() {
+  arr[0]="default"
+  arr[1]="ubi8"
+
+  rand=$[ $RANDOM % 2 ]
+  echo ${arr[$rand]}
+}
+
 # ****************************************************************************
 # SECTION: Argument parsing and execution
 # ****************************************************************************
@@ -1507,7 +1865,7 @@ if [ $# -eq 1 ]; then
 else
   PLATFORM=$1
   TEST_GROUP=$2
-  validPlatforms="cloud darwin linux windows"
+  validPlatforms="cloud darwin linux windows docker"
   isValidPlatform=$(echo $validPlatforms | grep $PLATFORM)
   if [ $? -ne 0 ]; then
     echo_error_exit "Invalid platform '$PLATFORM' must be one of: '$validPlatforms'"
@@ -1526,27 +1884,31 @@ export GCS_UPLOAD_PREFIX="internal-ci-artifacts/jobs/${JOB_NAME}/${BUILD_NUMBER}
 
 case "$TEST_GROUP" in
   intake)
-    if [ $PLATFORM == "cloud" ]; then
-      echo_error_exit "'intake' job is not valid on cloud"
+    if [ $PLATFORM == "cloud" ] || [ $PLATFORM == "docker" ]; then
+      echo_error_exit "'intake' job is not valid on cloud or docker"
     fi
     run_unit_tests
     ;;
   ossGrp*)
     if [ $PLATFORM == "cloud" ]; then
       run_cloud_oss_tests $TEST_GROUP
+    elif [ $PLATFORM == "docker" ]; then
+      run_docker_oss_tests $TEST_GROUP
     else
       run_oss_tests $TEST_GROUP
     fi
     ;;
   xpackIntake)
-    if [ $PLATFORM == "cloud" ]; then
-      echo_error_exit "'x-pack-intake' job is not valid on cloud"
+    if [ $PLATFORM == "cloud" ] || [ $PLATFORM == "docker" ]; then
+      echo_error_exit "'x-pack-intake' job is not valid on cloud or docker"
     fi
     run_xpack_unit_tests
     ;;
   xpackGrp*)
     if [ $PLATFORM == "cloud" ]; then
       run_cloud_xpack_func_tests $TEST_GROUP
+    elif [ $PLATFORM == "docker" ]; then
+       run_docker_xpack_func_tests $TEST_GROUP
     else
       run_xpack_func_tests $TEST_GROUP
     fi
@@ -1554,6 +1916,8 @@ case "$TEST_GROUP" in
   xpackExt*)
     if [ $PLATFORM == "cloud" ]; then
       run_cloud_xpack_ext_tests
+    elif [ $PLATFORM == "docker" ]; then
+      run_docker_xpack_ext_tests
     else
       run_xpack_ext_tests false $TEST_GROUP
     fi
