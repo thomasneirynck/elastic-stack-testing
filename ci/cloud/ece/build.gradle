@@ -21,6 +21,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 
+import java.text.SimpleDateFormat;
 
 plugins {
   id 'org.ajoberstar.grgit' version '4.0.2' apply false
@@ -48,6 +49,10 @@ task getenv_var {
     ext.kibana_ver = (System.env.ESTF_KIBANA_VERSION).minus('origin/')
     ext.cloud_ver =  System.env.ESTF_CLOUD_VERSION
     ext.build_hash = System.env.ESTF_BUILD_HASH
+    ext.populate_hash = build_hash
+    if (cloud_ver.contains("-SNAPSHOT")) {
+      ext.build_hash = ""
+    }
     ext.homedir = System.env.HOME
     ext.ver_whole = "$cloud_ver-$build_hash"
     ext.datadir = "$homedir/data"
@@ -60,13 +65,11 @@ task getenv_var {
  ***********************************************************************************
  */
 
-// *********************************************************************************
-task create_ece_dir() {
-  doFirst {
-    mkdir "$buildDir/ece"
-    mkdir "${getenv_var['datadir']}"
-  }
-}
+/*
+ ***********************************************************************************
+ ECE Methods
+ ***********************************************************************************
+ */
 
 // *********************************************************************************
 def downloadShellFile(link, name, dirname) {
@@ -85,6 +88,20 @@ def downloadShellFile(link, name, dirname) {
   }
 }
 
+/*
+ ***********************************************************************************
+ ECE Tasks
+ ***********************************************************************************
+ */
+
+// *********************************************************************************
+task create_ece_dir() {
+  doFirst {
+    mkdir "$buildDir/ece"
+    mkdir "${getenv_var['datadir']}"
+  }
+}
+
 // *********************************************************************************
 task install_ece(dependsOn: create_ece_dir) {
   doFirst {
@@ -92,7 +109,8 @@ task install_ece(dependsOn: create_ece_dir) {
     downloadShellFile('https://download.elastic.co/cloud/elastic-cloud-enterprise.sh',
                       'elastic-cloud-enterprise.sh',
                       "$buildDir/ece")
-    ShellCommand shell = new ShellCommand("./elastic-cloud-enterprise.sh install --host-storage-path ${getenv_var['datadir']}",
+    ShellCommand shell = new ShellCommand("./elastic-cloud-enterprise.sh install " +
+                                          "--host-storage-path ${getenv_var['datadir']}",
                                           "$buildDir/ece")
     shell.waitFor()
     def out = shell.getOutput()
@@ -134,21 +152,9 @@ task install_ece(dependsOn: create_ece_dir) {
  ***********************************************************************************
  */
 
-// *********************************************************************************
-task get_cloud_assets_repo {
-  doFirst {
-    println "In ${name}"
-    java.lang.System.setProperty("org.ajoberstar.grgit.auth.session.config.StrictHostKeyChecking", "no")
-    def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
-                            uri: 'git@github.com:elastic/cloud-assets.git',
-                            refToCheckout: "${getenv_var['kibana_ver']}")
-    println grgit.describe()
-  }
-}
-
 /*
  ***********************************************************************************
- General Methods
+ Cloud Assets Methods
  ***********************************************************************************
  */
 
@@ -179,8 +185,9 @@ def dockerImageExists(name) {
 def _populate_build(args) {
   return tasks.create(name: args.name) {
     println "In ${name}"
-    ShellCommand shell = new ShellCommand("./populate-build-dir.sh ${getenv_var['cloud_ver']} ${getenv_var['build_hash']} " + args.tmpdir,
-                                          args.dirname)
+    ShellCommand shell = new ShellCommand(["./populate-build-dir.sh", "${getenv_var['cloud_ver']}",
+                                           "${getenv_var['populate_hash']}", args.tmpdir],
+                                           args.dirname)
     shell.waitFor()
     def out = shell.getOutput()
     if (shell.getRc() != 0) {
@@ -227,6 +234,24 @@ def _update_dockerfile(args) {
 
 /*
  ***********************************************************************************
+ Cloud Assets Tasks
+ ***********************************************************************************
+ */
+
+// *********************************************************************************
+task get_cloud_assets_repo {
+  doFirst {
+    println "In ${name}"
+    java.lang.System.setProperty("org.ajoberstar.grgit.auth.session.config.StrictHostKeyChecking", "no")
+    def grgit = Grgit.clone(dir: "$buildDir/cloud-assets",
+                            uri: 'git@github.com:elastic/cloud-assets.git',
+                            refToCheckout: "${getenv_var['kibana_ver']}")
+    println grgit.describe()
+  }
+}
+
+/*
+ ***********************************************************************************
  Build stack pack
  ***********************************************************************************
  */
@@ -235,7 +260,10 @@ def _update_dockerfile(args) {
 task build_stackpack(dependsOn: get_cloud_assets_repo) {
   doFirst {
     println "In ${name}"
-    def ver = "${getenv_var['ver_whole']}"
+    def ver = "${getenv_var['cloud_ver']}"
+    if (getenv_var['build_hash']) {
+      ver =  "${getenv_var['ver_whole']}"
+    }
     ShellCommand shell = new ShellCommand("make build-stackpack VERSION=$ver " +
                                           "ELASTICSEARCH_IMAGE=docker.elastic.co/cloud-ci/elasticsearch:$ver " +
                                           "KIBANA_IMAGE=docker.elastic.co/cloud-ci/kibana:$ver " +
@@ -260,11 +288,15 @@ task build_stackpack(dependsOn: get_cloud_assets_repo) {
 // *********************************************************************************
 task build_baseimage() {
   doFirst {
-    ext.dockerImage = "docker.elastic.co/cloud-ci/baseimage:${getenv_var['ver_whole']}"
+    def date = new Date()
+    def sdf = new SimpleDateFormat("yyyyMMdd")
+    def image_tag = sdf.format(date)
+
+    ext.dockerImage = "docker.elastic.co/cloud-ci/baseimage:" + image_tag
     if (! dockerImageExists(dockerImage)) {
       _build_image([name: "gen_${name}",
                     dirname: "$buildDir/cloud-assets/docker/base/baseimage",
-                    runCmd: "./build.sh ${getenv_var['ver_whole']}"])
+                    runCmd: ["./build.sh", image_tag]])
     }
   }
 }
@@ -292,7 +324,10 @@ task build_baseimage_elasticsearch(dependsOn: populate_build_elasticsearch) {
     if (! dockerImageExists(dockerImage)) {
       _build_image([name: "gen_${name}",
                     dirname: "$buildDir/cloud-assets/docker/elasticsearch/baseimage",
-                    runCmd: "./build.sh ${getenv_var['cloud_ver']} " + populate_build_elasticsearch.tmpdir + " ${getenv_var['build_hash']} " ])
+                    runCmd: ["./build.sh",
+                             "${getenv_var['cloud_ver']}",
+                             populate_build_elasticsearch.tmpdir,
+                             "${getenv_var['build_hash']}"]])
     }
   }
 }
@@ -306,20 +341,17 @@ task build_baseimage_elasticsearch(dependsOn: populate_build_elasticsearch) {
 // *********************************************************************************
 task build_cloudimage_elasticsearch(dependsOn: build_baseimage_elasticsearch) {
   doFirst {
-    ext.dockerImage = "docker.elastic.co/cloud-ci/elasticsearch:${getenv_var['ver_whole']}"
+    ext.dockerImage = "docker.elastic.co/cloud-ci/elasticsearch:${getenv_var['cloud_ver']}"
     if (! dockerImageExists(dockerImage)) {
       _build_image([name: "gen_${name}",
                     dirname: "$buildDir/cloud-assets/docker/elasticsearch/cloudimage",
-                    runCmd: "./build.sh ${getenv_var['cloud_ver']} ${getenv_var['build_hash']} " + getTempDir()])
+                    runCmd: ["./build.sh",
+                             "${getenv_var['cloud_ver']}",
+                             "${getenv_var['build_hash']}",
+                             getTempDir()]])
     }
   }
 }
-
-/*
- ***********************************************************************************
- Build Base Image: Kibana
- ***********************************************************************************
- */
 
 /*
  ***********************************************************************************
@@ -330,11 +362,14 @@ task build_cloudimage_elasticsearch(dependsOn: build_baseimage_elasticsearch) {
 // *********************************************************************************
 task build_cloudimage_kibana() {
   doFirst {
-    ext.dockerImage = "docker.elastic.co/cloud-ci/kibana:${getenv_var['ver_whole']}"
+    ext.dockerImage = "docker.elastic.co/cloud-ci/kibana:${getenv_var['cloud_ver']}"
     if (! dockerImageExists(dockerImage)) {
       _build_image([name: "gen_${name}",
                     dirname: "$buildDir/cloud-assets/docker/kibana/cloudimage",
-                    runCmd: "./build.sh ${getenv_var['cloud_ver']} ${getenv_var['build_hash']} " + getTempDir()])
+                    runCmd: ["./build.sh",
+                             "${getenv_var['cloud_ver']}",
+                             "${getenv_var['build_hash']}",
+                             getTempDir()]])
     }
   }
 }
@@ -358,13 +393,6 @@ def getIP() {
 }
 
 // *********************************************************************************
-task create_ecctl_dir() {
-  doFirst {
-    mkdir "$buildDir/ecctl"
-  }
-}
-
-// *********************************************************************************
 def downloadTarFile(link, name, dirname) {
   exec {
     workingDir dirname
@@ -377,6 +405,13 @@ def downloadTarFile(link, name, dirname) {
   exec {
     workingDir dirname
     commandLine 'rm', name
+  }
+}
+
+// *********************************************************************************
+task create_ecctl_dir() {
+  doFirst {
+    mkdir "$buildDir/ecctl"
   }
 }
 
@@ -394,7 +429,11 @@ task get_ecctl(dependsOn: create_ecctl_dir) {
 task ecctl_platform_upload() {
   doFirst {
     println "In ${name}"
-    def zipFile = "$buildDir/cloud-assets/${getenv_var['ver_whole']}.zip"
+    def ver = "${getenv_var['cloud_ver']}"
+    if (getenv_var['build_hash']) {
+      ver =  "${getenv_var['ver_whole']}"
+    }
+    def zipFile = "$buildDir/cloud-assets/${ver}.zip"
     ShellCommand shell = new ShellCommand("./ecctl platform stack upload " + zipFile,
                                           "$buildDir/ecctl")
     shell.waitFor()
@@ -410,6 +449,10 @@ task ecctl_platform_upload() {
 task ecctl_create_deployment() {
   doFirst {
     println "In ${name}"
+    def ver = "${getenv_var['cloud_ver']}"
+    if (getenv_var['build_hash']) {
+      ver =  "${getenv_var['ver_whole']}"
+    }
     def match = ""
     def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
                   "${getenv_var['kibana_ver']}" + "/ci/cloud/ece/ecePlan.json"
@@ -421,7 +464,7 @@ task ecctl_create_deployment() {
     def ip =  getIP()
     ShellCommand shell = new ShellCommand("./ecctl deployment create -f " + plan +
                                           " --name " + name +
-                                          " --version " + "${getenv_var['ver_whole']}" +
+                                          " --version " + "$ver" +
                                           " --track",
                                           "$buildDir/ecctl")
     shell.waitFor()
@@ -527,4 +570,13 @@ task ece_run_kibana_tests(type: GradleBuild) {
              'build_cloudimage_elasticsearch', 'build_cloudimage_kibana',
              'get_ecctl', 'ecctl_platform_upload', 'ecctl_create_deployment',
              ':common:run_kibana_tests']
+}
+
+// *********************************************************************************
+task ece_run_kibana_pr(type: GradleBuild) {
+    println "In ${name}"
+    tasks = ['getenv_var', 'install_ece', 'build_stackpack', 'get_ecctl',
+             ':common:kibana_build_docker_image',
+             'build_cloudimage_elasticsearch', 'build_cloudimage_kibana',
+             'ecctl_platform_upload', 'ecctl_create_deployment']
 }

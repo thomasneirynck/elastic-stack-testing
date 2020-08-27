@@ -50,6 +50,19 @@ class ShellCommand
     errThread = proc.consumeProcessErrorStream(new LineOutput(echo: echo, prefix: "", lines: errLines))
   }
 
+  ShellCommand(List cmd, String workingDir = null, List envVars = null)
+  {
+    mycmd = cmd
+    echo = true
+    if (! workingDir?.trim()) {
+      workingDir = System.getProperty("user.dir")
+    }
+    proc = cmd.execute(envVars, new File(workingDir))
+    // Start the stdout, stderr spooler threads
+    outThread = proc.consumeProcessOutputStream(new LineOutput(echo: echo, prefix: "", lines: outLines))
+    errThread = proc.consumeProcessErrorStream(new LineOutput(echo: echo, prefix: "", lines: errLines))
+  }
+
   def waitFor()
   {
     proc.waitFor()

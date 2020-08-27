@@ -121,7 +121,8 @@ function echo_debug() {
 # ----------------------------------------------------------------------------
 function exit_script() {
   rc=${1:-0}
-  msg=$2
+  shift
+  msg=$@
 
   if [ $rc -ne 0 ]; then
     echo_error_exit $msg
@@ -568,6 +569,32 @@ function yarn_kbn_bootstrap() {
 }
 
 # ----------------------------------------------------------------------------
+# Method to build docker image
+# ----------------------------------------------------------------------------
+function yarn_build_docker() {
+  yarn build --no-oss --docker --skip-docker-ubi
+
+  if [ $? -ne 0 ]; then
+    echo_error_exit "yarn build docker failed!"
+  fi
+}
+
+# ----------------------------------------------------------------------------
+# Method to get kibana es snapshot docker image
+# ----------------------------------------------------------------------------
+function get_kbn_es_docker_snapshot() {
+  if [ ! -z $ESTF_SKIP_KBN_ES_SNAPSHOT ]; then
+    return
+  fi
+  echo_info "Get Kibana Elasticsearch Docker Snapshot"
+  _url=$(curl -sX GET https://storage.googleapis.com/kibana-ci-es-snapshots-daily/${ESTF_KBN_ES_SNAPSHOT_VERSION}/manifest-latest-verified.json | jq '.archives[] | select(.platform=="docker") | .url')
+  curl -s "${_url//\"}" | docker load -i /dev/stdin
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Get and load docker image: $_url failed!"
+  fi
+}
+
+# ----------------------------------------------------------------------------
 # Method to run kbn clean
 # ----------------------------------------------------------------------------
 function yarn_kbn_clean() {
@@ -612,6 +639,15 @@ function run_ci_setup() {
   install_yarn
   yarn_kbn_bootstrap
   check_git_changes
+}
+
+# -----------------------------------------------------------------------------
+# Method to setup CI environment
+# -----------------------------------------------------------------------------
+function run_ci_setup_get_docker_images() {
+  run_ci_setup
+  yarn_build_docker
+  get_kbn_es_docker_snapshot
 }
 
 # -----------------------------------------------------------------------------
@@ -710,7 +746,23 @@ function check_kibana_version() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to check clodu version for flaky test runner
+# Method to set cloud and kibana es snapshot version for pr testing
+# -----------------------------------------------------------------------------
+function set_cloud_es_version() {
+  _ver=$(curl -sX GET "https://raw.githubusercontent.com/elastic/kibana/${ESTF_KIBANA_VERSION}/package.json" | jq '.version')
+  echo $_ver
+  if [ ! -z $ESTF_USE_BC ]; then
+    export ESTF_CLOUD_VERSION="${_ver//\"}"
+  else
+    export ESTF_CLOUD_VERSION="${_ver//\"}-SNAPSHOT"
+  fi
+  export ESTF_KBN_ES_SNAPSHOT_VERSION="${_ver//\"}"
+  _sha=$(curl -sX GET https://storage.googleapis.com/kibana-ci-es-snapshots-daily/${ESTF_KBN_ES_SNAPSHOT_VERSION}/manifest-latest-verified.json | jq '.sha')
+  export ESTF_ELASTICSEARCH_COMMIT="${_sha}"
+}
+
+# -----------------------------------------------------------------------------
+# Method to check cloud version for flaky test runner
 # -----------------------------------------------------------------------------
 function check_cloud_version() {
   if [ -z $ESTF_CLOUD_VERSION ]; then
@@ -904,6 +956,14 @@ function flaky_test_runner_cloud_prechecks() {
   set_number_executions_deployments
   check_test_type
   create_matrix_job_file
+}
+
+# -----------------------------------------------------------------------------
+# Method to run pr test runner cloud prechecks
+# -----------------------------------------------------------------------------
+function pr_cloud_prechecks() {
+  check_kibana_version
+  set_cloud_es_version
 }
 
 # -----------------------------------------------------------------------------
@@ -1948,6 +2008,12 @@ case "$TEST_GROUP" in
     ;;
   flaky_test_runner)
     flaky_test_runner
+    ;;
+  build_docker)
+    run_ci_setup_get_docker_images
+    ;;
+  pr_cloud_prechecks)
+    pr_cloud_prechecks
     ;;
   *)
     echo_error_exit "TEST_GROUP '$TEST_GROUP' is invalid group"
