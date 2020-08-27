@@ -1668,7 +1668,7 @@ function run_docker_xpack_func_tests() {
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
-  TEST_KIBANA_BUILD=echo $(random_docker_image)
+  TEST_KIBANA_BUILD=$(random_docker_image)
   TEST_KIBANA_DOCKER=true
 
   run_ci_setup
@@ -1712,7 +1712,7 @@ function run_docker_xpack_ext_tests() {
   echo_info "In run_docker_xpack_ext_tests"
   local funcTests="${1:- false}"
 
-  TEST_KIBANA_BUILD=echo $(random_docker_image)
+  TEST_KIBANA_BUILD=$(random_docker_image)
   TEST_KIBANA_DOCKER=true
 
   run_ci_setup
