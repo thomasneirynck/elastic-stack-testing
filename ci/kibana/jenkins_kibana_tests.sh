@@ -1593,7 +1593,7 @@ function docker_load {
     kbnpw=$(docker exec es01 /bin/bash -c "grep \"PASSWORD kibana_system\" passwords.txt" | awk '{print $4}')
 
     echo_info "Run docker compose stop..."
-    docker-compose stop
+    docker-compose -f elastic-docker-tls.yml stop
     if [ $? -ne 0 ]; then
       echo_error_exit "Docker compose stop failed"
     fi
