@@ -1473,7 +1473,8 @@ function run_with_timeout {
 # -----------------------------------------------------------------------------
 function _wait_for_es_ready() {
   while true; do
-    docker logs es01 | grep -E -i -w 'to \[GREEN\].*elasticsearch'
+    docker logs es01 | grep -E -i -w '(es01.*to \[GREEN\])|(to \[GREEN\].*elasticsearch)'
+
     if [ $? -eq 0 ]; then
       break
     fi
