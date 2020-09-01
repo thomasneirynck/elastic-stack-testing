@@ -283,6 +283,24 @@ function get_os() {
 }
 
 # ----------------------------------------------------------------------------
+# Get version to compare
+# ----------------------------------------------------------------------------
+function getver() {
+  printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' ')
+}
+
+# ----------------------------------------------------------------------------
+# Compare version
+# ----------------------------------------------------------------------------
+function vge() {
+  if [ $(getver $1) -ge $(getver $2) ]; then
+    echo 1
+  else
+   echo 0
+  fi
+}
+
+# ----------------------------------------------------------------------------
 # Method to get Kibana package
 # ----------------------------------------------------------------------------
 function get_kibana_pkg() {
@@ -294,8 +312,8 @@ function get_kibana_pkg() {
   # Get if oss packages are available
   local _splitStr=(${Glb_Kibana_Version//./ })
   local _version=${_splitStr[0]}.${_splitStr[1]}
-  local _isOssSupported=$(echo "$_version 6.3" | awk '{print ($1 >= $2)}')
-  local _isUbiSupported=$(echo "$_version 7.10" | awk '{print ($1 >= $2)}')
+  local _isOssSupported=$(vge $_version "6.3")
+  local _isUbiSupported=$(vge $_version "7.10")
 
   # Package type
   local _pkgType="${TEST_KIBANA_BUILD:-"oss"}"
