@@ -265,10 +265,7 @@ function get_os() {
   if [[ "$_uname" = *"MINGW64_NT"* ]]; then
     Glb_OS="windows"
   elif [[ "$_uname" = "Darwin" ]]; then
-    export SELENIUM_REMOTE_URL="http://localhost:4444/wd/hub"
     Glb_OS="darwin"
-    #TODO: remove later
-    Glb_KbnClean="yes"
   elif [[ "$_uname" = "Linux" ]]; then
     Glb_OS="linux"
   elif [[ "$_uname" = "Docker" ]]; then
@@ -353,6 +350,14 @@ function get_kibana_pkg() {
     _esPkgName=".tar.gz"
     if [[ "$Glb_OS" = "windows" ]]; then
       _esPkgName=".zip"
+    fi
+  fi
+
+  # Set remote
+  if [[ "$Glb_OS" = "darwin" ]]; then
+    export SELENIUM_REMOTE_URL="http://localhost:4444/wd/hub"
+    if [[ "$Glb_Kibana_Version" == *"6.8"* ]]; then
+      export SELENIUM_REMOTE_URL="http://localhost:4545/wd/hub"
     fi
   fi
 
