@@ -569,7 +569,7 @@ function yarn_kbn_bootstrap() {
 
   if $Glb_ChromeDriverHack; then
     echo_warning "Temporary update package.json bump chromedriver."
-    sed -i 's/"chromedriver": "79.0.0"/"chromedriver": "^81.0.0"/g' package.json
+    sed -i 's/"chromedriver": "^83.0.0"/"chromedriver": "^84.0.0"/g' package.json
   fi
 
   # For windows testing
@@ -1957,7 +1957,7 @@ else
 fi
 
 # -- Set to true, if Chromedriver mismatch on workers
-Glb_ChromeDriverHack=false
+Glb_ChromeDriverHack=true
 Glb_YarnNetworkTimeout=0
 
 # Source pre-defined groups
