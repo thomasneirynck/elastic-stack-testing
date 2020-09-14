@@ -579,8 +579,8 @@ function yarn_kbn_bootstrap() {
   fi
 
   # To deal with mismatched chrome versions on CI workers
-  #export CHROMEDRIVER_FORCE_DOWNLOAD=true
-  #export DETECT_CHROMEDRIVER_VERSION=true
+  export CHROMEDRIVER_FORCE_DOWNLOAD=true
+  export DETECT_CHROMEDRIVER_VERSION=true
 
   yarn kbn bootstrap --prefer-offline
 
@@ -1957,7 +1957,7 @@ else
 fi
 
 # -- Set to true, if Chromedriver mismatch on workers
-Glb_ChromeDriverHack=true
+Glb_ChromeDriverHack=false
 Glb_YarnNetworkTimeout=0
 
 # Source pre-defined groups
