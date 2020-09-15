@@ -1396,6 +1396,7 @@ function run_cloud_xpack_ext_tests() {
         test/reporting/configs/chromium_api.js
         test/reporting/configs/chromium_functional.js
         test/reporting_api_integration/config.js
+        test/reporting_api_integration/reporting_and_security.config.ts
         test/api_integration/config.js
         test/api_integration/config.ts
        "
@@ -1755,6 +1756,7 @@ function run_docker_xpack_ext_tests() {
         test/reporting/configs/chromium_api.js
         test/reporting/configs/chromium_functional.js
         test/reporting_api_integration/config.js
+        test/reporting_api_integration/reporting_and_security.config.ts
         test/api_integration/config.js
         test/api_integration/config.ts
        "

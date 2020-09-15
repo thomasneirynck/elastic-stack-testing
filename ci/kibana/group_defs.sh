@@ -1,13 +1,13 @@
-ossGrp1="console
-         getting_started
+ossGrp1="bundles
+         console
          context
          discover
+         getting_started
          home
          management
+         saved_objects_management
          status_page
          timelion
-         bundles
-         saved_objects_management
         "
 
 ossGrp2="visualize
@@ -22,57 +22,60 @@ xpackGrp1="advanced_settings
            grok_debugger
            index_lifecycle_management
            index_management
+           license_management
+           maps
            reporting_management
            transform
-           maps
-           license_management
           "
 
-xpackGrp2="status_page
+xpackGrp2="canvas
+           dashboard_mode
+           dev_tools
+           discover
+           graph
+           index_patterns
+           infra
+           logstash
+           status_page
            timelion
            upgrade_assistant
            uptime
            watcher
-           index_patterns
-           logstash
-           graph
-           discover
-           dashboard_mode
-           canvas
-           dev_tools
-           infra
           "
 
 xpackGrp3="dashboard
-           visualize
            lens
            machine_learning
            ml
+           visualize
           "
 
-xpackGrp4="monitoring
+xpackGrp4="api_keys
+           ingest_pipelines
+           monitoring
            remote_clusters
            rollup_job
            saved_objects_management
            security
            snapshot_restore
            spaces
-           api_keys
           "
 
-xpackExtGrp1="reporting
-              reporting_api_integration
+xpackExtGrp1="alerting_api_integration
               api_integration
-              alerting_api_integration
-              plugin_api_integration
               kerberos_api_integration
+              plugin_api_integration
+              reporting
+              reporting_api_integration
              "
-xpackExtGrp2="saml_api_integration
-              token_api_integration
-              oidc_api_integration
+
+xpackExtGrp2="oidc_api_integration
               pki_api_integration
+              saml_api_integration
               spaces_api_integration
+              token_api_integration
              "
+
 xpackExtGrp3="saved_object_api_integration
               ui_capabilities
               upgrade_assistant_integration
