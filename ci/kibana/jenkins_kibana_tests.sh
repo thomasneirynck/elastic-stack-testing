@@ -125,7 +125,7 @@ function exit_script() {
   msg=$@
 
   if [ $rc -ne 0 ]; then
-    echo_error_exit $msg
+    echo_error_exit "$msg"
   fi
   exit
 }
@@ -1267,6 +1267,8 @@ function run_xpack_ext_tests() {
     cfgs=$filter_matches
   fi
 
+  cfgs=$(echo $cfgs | xargs -n1 | sort -u | xargs)
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     for cfg in $cfgs; do
@@ -1373,6 +1375,7 @@ function run_cloud_xpack_func_tests() {
 # Method to run cloud xpack tests
 # -----------------------------------------------------------------------------
 function run_cloud_xpack_ext_tests() {
+  local testGrp="${1:-xpackExtAll}"
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   echo_info "In run_cloud_xpack_ext_tests"
@@ -1382,24 +1385,72 @@ function run_cloud_xpack_ext_tests() {
   run_ci_setup
   update_test_files
 
-  local _xpack_dir="$(cd x-pack; pwd)"
-  echo_info "-> XPACK_DIR ${_xpack_dir}"
-  cd "$_xpack_dir"
-
   export TEST_BROWSER_HEADLESS=1
 
   # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
   export TEST_CLOUD=1
 
   # Note: Only the following tests run on cloud at this time
-  cfgs="test/functional/config.js
-        test/reporting/configs/chromium_api.js
-        test/reporting/configs/chromium_functional.js
-        test/reporting_api_integration/config.js
-        test/reporting_api_integration/reporting_and_security.config.ts
-        test/api_integration/config.js
-        test/api_integration/config.ts
-       "
+  varcfg="Glb_${testGrp}Cfg"
+  cfgs=${!varcfg}
+
+  if [[ ! -z $ESTF_FLAKY_TEST_SUITE ]]; then
+    if [[ ! -z $ESTF_TEST_CONFIG ]]; then
+      _cfgs=""
+      errors=0
+      for testconfig in $ESTF_TEST_CONFIG; do
+        if [ ! -f $testconfig ]; then
+          ((errors++))
+          break
+        fi
+        _cfgs+="${testconfig#"x-pack/"}
+        "
+      done
+    else
+      _cfgs=""
+      errors=0
+      for flakytest in $ESTF_FLAKY_TEST_SUITE; do
+        found=0
+        for cfg in $cfgs; do
+          if [ ! -f x-pack/$cfg ]; then
+            continue
+          fi
+          IFS='/' read -a fields <<< $cfg
+          cfgdir="x-pack/${fields[0]}/${fields[1]}/"
+          if [[ "$flakytest" == *"$cfgdir"* ]]; then
+            _cfgs+="$cfg
+            "
+            found=1
+            break
+          fi
+        done
+        if [ $found -eq 0 ]; then
+          ((errors++))
+          break
+        fi
+      done
+    fi
+    if [[ -z $_cfgs ]]; then
+      echo_error_exit "!!!
+      No configurations match your test suite.
+      If your configuration needs to be added, open an issue in
+      https://github.com/elastic/elastic-stack-testing/issues/new
+      Only the following configs are currently accepted:
+      $cfgs"
+    elif [[ $errors -gt 0 ]]; then
+      echo_error_exit "!!!
+      Some configurations do not match your test suite.
+      If your configuration needs to be added, open an issue in
+      https://github.com/elastic/elastic-stack-testing/issues/new
+      Only the following configs are currently accepted:
+      $cfgs"
+    fi
+    cfgs=$(echo $_cfgs | xargs -n1 | sort -u | xargs)
+  fi
+
+  local _xpack_dir="$(cd x-pack; pwd)"
+  echo_info "-> XPACK_DIR ${_xpack_dir}"
+  cd "$_xpack_dir"
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
@@ -1732,6 +1783,7 @@ function run_docker_xpack_func_tests() {
 # Method to run docker xpack tests
 # -----------------------------------------------------------------------------
 function run_docker_xpack_ext_tests() {
+  local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
   echo_info "In run_docker_xpack_ext_tests"
@@ -1752,14 +1804,8 @@ function run_docker_xpack_ext_tests() {
   echo_info "-> XPACK_DIR ${_xpack_dir}"
   cd "$_xpack_dir"
 
-  cfgs="test/functional/config.js
-        test/reporting/configs/chromium_api.js
-        test/reporting/configs/chromium_functional.js
-        test/reporting_api_integration/config.js
-        test/reporting_api_integration/reporting_and_security.config.ts
-        test/api_integration/config.js
-        test/api_integration/config.ts
-       "
+  varcfg="Glb_${testGrp}Cfg"
+  cfgs=${!varcfg}
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
@@ -1849,10 +1895,28 @@ function update_report_name() {
     return
   fi
 
+  hasReportName=$(grep -c "reportName" $configFile)
+  if [[ $hasReportName == 0 ]]; then
+    importCfg=$(grep "createTestConfig.*from" $configFile | grep -Eo "'.*'" | tr -d "'")
+    if [[ -z $importCfg ]]; then
+      return
+    fi
+    otherCfg="$(dirname $configFile)/$importCfg.ts"
+    if [[ ! -f $otherCfg ]]; then
+      return
+    fi
+    configFile=$otherCfg
+  fi
+
   file_modified=$(grep -c "ESTF_RUN_NUMBER" $configFile)
   echo_debug "$configFile already modified: $file_modified"
   if [[ $file_modified == 0 ]]; then
-    sed -i '/reportName:.*/ s/,/ + process.env.ESTF_RUN_NUMBER,/' $configFile
+    brace=$(grep -Ec "reportName.*}," $configFile)
+    if [[ $brace > 0 ]]; then
+      sed -i '/reportName:.*/ s/},/ + process.env.ESTF_RUN_NUMBER},/' $configFile
+    else
+      sed -i '/reportName:.*/ s/,/ + process.env.ESTF_RUN_NUMBER,/' $configFile
+    fi
   fi
 }
 
@@ -1939,6 +2003,36 @@ function random_docker_image() {
 }
 
 # ****************************************************************************
+# SECTION: Cloud/Docker Configurations
+# ****************************************************************************
+
+Glb_xpackExtGrp1Cfg="test/alerting_api_integration/basic/config.ts
+                     test/api_integration/config.js
+                     test/api_integration/config.ts
+                     test/apm_api_integration/trial/config.ts
+                     test/case_api_integration/basic/config.ts
+                     test/functional_enterprise_search/without_host_configured.config.ts
+                     test/reporting/configs/chromium_api.js
+                     test/reporting/configs/chromium_functional.js
+                     test/reporting_api_integration/config.js
+                     test/reporting_api_integration/reporting_and_security.config.ts
+                    "
+Glb_xpackExtGrp2Cfg="test/detection_engine_api_integration/basic/config.ts
+                     test/detection_engine_api_integration/security_and_spaces/config.ts
+                     test/ingest_manager_api_integration/config.ts
+                     test/security_api_integration/session_idle.config.ts
+                     test/security_solution_endpoint/config.ts
+                     test/security_solution_endpoint_api_int/config.ts
+                    "
+
+Glb_xpackExtAllCfg="$Glb_xpackExtGrp1Cfg
+                    $Glb_xpackExtGrp2Cfg
+                   "
+readonly Glb_xpackExtGrp1Cfg
+readonly Glb_xpackExtGrp2Cfg
+readonly Glb_xpackExtAllCfg
+
+# ****************************************************************************
 # SECTION: Argument parsing and execution
 # ****************************************************************************
 
@@ -2001,9 +2095,9 @@ case "$TEST_GROUP" in
     ;;
   xpackExt*)
     if [ $PLATFORM == "cloud" ]; then
-      run_cloud_xpack_ext_tests
+      run_cloud_xpack_ext_tests $TEST_GROUP
     elif [ $PLATFORM == "docker" ]; then
-      run_docker_xpack_ext_tests
+      run_docker_xpack_ext_tests $TEST_GROUP
     else
       run_xpack_ext_tests false $TEST_GROUP
     fi

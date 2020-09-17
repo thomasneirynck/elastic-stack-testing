@@ -10,5 +10,6 @@ JOB:
   - xpackExtGrp1
   - xpackExtGrp2
   - xpackExtGrp3
+  - xpackExtGrp4
 
 exclude: ~

@@ -6,6 +6,7 @@ JOB:
   - xpackGrp2
   - xpackGrp3
   - xpackGrp4
-  - xpackExt
+  - xpackExtGrp1
+  - xpackExtGrp2
 
 exclude: ~
