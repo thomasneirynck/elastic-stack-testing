@@ -13,7 +13,7 @@
         executable: /bin/bash
       register: kibana_process_id
       until: kibana_process_id.stdout != ""
-      retries: 5
+      retries: 30
       delay: 3
       ignore_errors: yes
     - name: Fail if kibana process is not running
