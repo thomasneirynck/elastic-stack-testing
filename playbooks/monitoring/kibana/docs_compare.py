@@ -26,6 +26,11 @@ def handle_special_case_kibana_stats(legacy_doc, metricbeat_doc):
   metricbeat_doc["kibana_stats"]["usage"]["search"]["total"] = legacy_doc["kibana_stats"]["usage"]["search"]["total"]
   metricbeat_doc["kibana_stats"]["usage"]["search"]["averageDuration"] = legacy_doc["kibana_stats"]["usage"]["search"]["averageDuration"]
 
+  # Special case for https://github.com/elastic/kibana/pull/76730
+  # To be removed if/when https://github.com/elastic/beats/issues/21092 is resolved
+  metricbeat_doc["kibana_stats"]["os"]["cpuacct"] = legacy_doc["kibana_stats"]["os"]["cpuacct"]
+  metricbeat_doc["kibana_stats"]["os"]["cpu"] = legacy_doc["kibana_stats"]["os"]["cpu"]
+
 def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
     if doc_type == "kibana_settings":
         handle_special_case_kibana_settings(legacy_doc, metricbeat_doc)
