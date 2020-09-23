@@ -13,3 +13,4 @@ xpack.reporting.csv.maxSizeBytes: 2850
 xpack.reporting.queue.pollInterval: 3000
 xpack.security.encryptionKey: "wuGNaIhoMpk5sO4UBxgr3NyW1sFcLgIf"
 xpack.security.session.idleTimeout: 3600000
+xpack.reporting.capture.timeouts.openUrl: 60000
