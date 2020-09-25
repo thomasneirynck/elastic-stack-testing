@@ -22,4 +22,12 @@
     src: '{{ logstash_package }}'
     dest: '{{ logstash_install_dir }}'
     remote_src: True
-  tags: install_logstash
+    list_files: yes
+  register: logstash_archive_contents
+
+- name: Rename directory if it does not match base package name
+  command:
+    mv '{{ logstash_archive_contents.files[0].split('/')[0] }}' '{{ logstash_rootdir | basename }}'
+  args:
+    chdir: '{{ logstash_install_dir}}'
+  when: "'{{ logstash_rootdir | basename }}' not in '{{ logstash_archive_contents.files[0].split('/')[0] }}'"

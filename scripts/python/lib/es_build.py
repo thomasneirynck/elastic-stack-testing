@@ -131,7 +131,10 @@ class ElasticStackBuild:
 
     @property
     def logstash_package_url(self):
-        return self._get_url(self._env_logstash_url, 'logstash')
+        url = self._get_url(self._env_logstash_url, 'logstash')
+        if url:
+            return url
+        return self._get_url_arch(self._env_logstash_url, 'logstash')
 
     @property
     def filebeat_package_url(self):

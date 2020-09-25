@@ -23,11 +23,11 @@
     dest: '{{ elasticsearch_install_dir }}'
     remote_src: True
     list_files: yes
-  register: archive_contents
+  register: elasticsearch_archive_contents
 
 - name: Rename directory if it does not match base package name
   command:
-    mv '{{ archive_contents.files[0].split('/')[0] }}' '{{ elasticsearch_rootdir | basename }}'
+    mv '{{ elasticsearch_archive_contents.files[0].split('/')[0] }}' '{{ elasticsearch_rootdir | basename }}'
   args:
     chdir: '{{ elasticsearch_install_dir}}'
-  when: "'{{ elasticsearch_rootdir | basename }}' not in '{{ archive_contents.files[0].split('/')[0] }}'"
+  when: "'{{ elasticsearch_rootdir | basename }}' not in '{{ elasticsearch_archive_contents.files[0].split('/')[0] }}'"
