@@ -268,15 +268,25 @@ function get_os() {
     Glb_OS="darwin"
   elif [[ "$_uname" = "Linux" ]]; then
     Glb_OS="linux"
+    Glb_Arch=$(uname -m)
   elif [[ "$_uname" = "Docker" ]]; then
     Glb_OS="docker"
   else
     echo_error_exit "Unknown OS: $_uname"
   fi
 
-  echo_info "Running on OS: $Glb_OS"
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    Glb_Chromium=$(which chromium-browser)
+    Glb_ChromeDriver=$(which chromedriver)
+    if [[ -z $Glb_Chromium ]] || [[ -z $Glb_ChromeDriver ]]; then
+      echo_error_exit "Chromium and Chromedriver must be installed! Chromium: $Glb_Chromium, ChromeDriver: $Glb_ChromeDriver"
+    fi
+  fi
 
-  readonly Glb_OS
+  echo_info "Running on OS: $Glb_OS"
+  echo_info "Running on Arch: $Glb_Arch"
+
+  readonly Glb_OS Glb_Arch Glb_Chromium Glb_ChromeDriver
 }
 
 # ----------------------------------------------------------------------------
@@ -337,7 +347,7 @@ function get_kibana_pkg() {
   elif [[ "$Glb_OS" = "darwin" ]]; then
     _pkgName="darwin-x86_64.tar.gz"
   elif [[ "$Glb_OS" = "linux" ]]; then
-    _pkgName="linux-x86_64.tar.gz"
+    _pkgName="linux-${Glb_Arch}.tar.gz"
   elif [[ "$Glb_OS" = "docker" ]]; then
     _pkgName="docker-image.tar.gz"
   else
@@ -455,7 +465,17 @@ function download_and_extract_package() {
   if [[ "$Glb_OS" == "windows" ]]; then
     export JAVA_HOME="c:\Users\jenkins\.java\java11"
   else
-    export JAVA_HOME="/var/lib/jenkins/.java/java11"
+    if [[ "$Glb_Arch" == "aarch64" ]]; then
+      export JAVA_HOME="/var/lib/jenkins/.java/adoptopenjdk11"
+    elif [[ "$Glb_Arch" == "x86_64" ]]; then
+      export JAVA_HOME="/var/lib/jenkins/.java/java11"
+    else
+      echo_error_exit "Unknown arch: $Glb_Arch"
+    fi
+  fi
+
+  if [[ ! -d $JAVA_HOME ]]; then
+      echo_error_exit "JAVA_HOME does not exist: $JAVA_HOME"
   fi
 
   readonly Glb_Kibana_Dir
@@ -496,7 +516,13 @@ function install_node() {
     _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-darwin-x64.tar.gz"
   elif [[ "$Glb_OS" == "linux" ||  "$Glb_OS" == "docker" ]]; then
     _nodeBin="$_nodeDir/bin"
-    _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-linux-x64.tar.gz"
+    if [[ "$Glb_Arch" == "x86_64" ]]; then
+      _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-linux-x64.tar.gz"
+    elif [[ "$Glb_Arch" == "aarch64" ]]; then
+      _nodeUrl="https://nodejs.org/dist/v$_nodeVersion/node-v$_nodeVersion-linux-arm64.tar.gz"
+    else
+      echo_error_exit "Unknown arch: $Glb_Arch"
+    fi
   else
     echo_error_exit "Unknown OS: $Glb_OS"
   fi
@@ -578,9 +604,17 @@ function yarn_kbn_bootstrap() {
     echo "network-timeout 600000" >> .yarnrc
   fi
 
-  # To deal with mismatched chrome versions on CI workers
-  export CHROMEDRIVER_FORCE_DOWNLOAD=true
-  export DETECT_CHROMEDRIVER_VERSION=true
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    local _filename=test/functional/services/remote/webdriver.ts
+    sed -i 's/new chrome.ServiceBuilder(chromeDriver.path)/new chrome.ServiceBuilder(chromeDriverPath)/g' $_filename
+    sed -i '/const headlessBrowser: string = process.env.TEST_BROWSER_HEADLESS as string;/a const chromeDriverPath = process.env.TEST_BROWSER_CHROMEDRIVER_PATH || chromeDriver.path;' $_filename
+  fi
+
+  if [[ "$Glb_Arch" != "aarch64" ]]; then
+    # To deal with mismatched chrome versions on CI workers
+    export CHROMEDRIVER_FORCE_DOWNLOAD=true
+    export DETECT_CHROMEDRIVER_VERSION=true
+  fi
 
   yarn kbn bootstrap --prefer-offline
 
@@ -633,17 +667,27 @@ function yarn_kbn_clean() {
 # ----------------------------------------------------------------------------
 function check_git_changes() {
   local _git_changes
+  local _exclude
 
-  _git_changes="$(git ls-files --modified | grep -Ev "yarn.lock")"
+  _exclude="yarn.lock"
 
   if $Glb_ChromeDriverHack; then
-    echo_warning "Temporary package.json modified for chromedriver."
-    _git_changes="$(git ls-files --modified | grep -Ev "package.json|yarn.lock")"
+    echo_warning "Modified package.json for chromedriver"
+    _exclude+="|package.json"
   fi
+
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    echo_warning "Modified remote webdriver service for chromedriver"
+    _exclude+="|test/functional/services/remote/webdriver.ts"
+  fi
+
   if [ $Glb_YarnNetworkTimeout -eq 0 ]; then
     echo_warning "Modified network timeout in .yarnrc"
-    _git_changes="$(git ls-files --modified | grep -Ev ".yarnrc")"
+    _exclude+="|.yarnrc"
   fi
+
+  _git_changes="$(git ls-files --modified | grep -Ev $_exclude)"
+
   if [ "$_git_changes" ]; then
     echo_error_exit "'yarn kbn bootstrap' caused changes to the following files:\n$_git_changes"
   fi
@@ -1161,6 +1205,10 @@ function run_oss_tests() {
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    export TEST_BROWSER_BINARY_PATH=$Glb_Chromium
+    export TEST_BROWSER_CHROMEDRIVER_PATH=$Glb_ChromeDriver
+  fi
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
@@ -1205,6 +1253,10 @@ function run_xpack_func_tests() {
   cd "$_xpack_dir"
 
   export TEST_BROWSER_HEADLESS=1
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    export TEST_BROWSER_BINARY_PATH=$Glb_Chromium
+    export TEST_BROWSER_CHROMEDRIVER_PATH=$Glb_ChromeDriver
+  fi
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
@@ -1247,6 +1299,10 @@ function run_xpack_ext_tests() {
   cd "$_xpack_dir"
 
   export TEST_BROWSER_HEADLESS=1
+  if [[ "$Glb_Arch" == "aarch64" ]]; then
+    export TEST_BROWSER_BINARY_PATH=$Glb_Chromium
+    export TEST_BROWSER_CHROMEDRIVER_PATH=$Glb_ChromeDriver
+  fi
 
   awk_exec="awk"
   if [[ "$Glb_OS" = "darwin" ]]; then
