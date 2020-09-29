@@ -261,6 +261,7 @@ function get_os() {
   if [[ ! -z $TEST_KIBANA_DOCKER ]]; then
     _uname="Docker"
   fi
+  Glb_Arch=$(uname -m)
   echo_debug "Uname: $_uname"
   if [[ "$_uname" = *"MINGW64_NT"* ]]; then
     Glb_OS="windows"
@@ -268,7 +269,6 @@ function get_os() {
     Glb_OS="darwin"
   elif [[ "$_uname" = "Linux" ]]; then
     Glb_OS="linux"
-    Glb_Arch=$(uname -m)
   elif [[ "$_uname" = "Docker" ]]; then
     Glb_OS="docker"
   else
