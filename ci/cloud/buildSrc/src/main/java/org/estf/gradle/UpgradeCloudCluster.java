@@ -43,12 +43,12 @@ public class UpgradeCloudCluster extends DefaultTask {
 
     @TaskAction
     public void run() {
-
         if (upgradeStackVersion == null) {
              throw new Error("Upgrade stack version is required.");
         }
 
-        System.out.println("************************************* UPGRADE *************************************************");
+        System.out.println("**************************  UPGRADE *********************************");
+        System.out.println(upgradeStackVersion);
 
         CloudApi cloudApi = new CloudApi();
         ClusterClient clusterClient = cloudApi.createClient();
@@ -67,7 +67,5 @@ public class UpgradeCloudCluster extends DefaultTask {
         Waiter.waitFor(() -> cloudApi.isKibanaRunning(
             kbnApi.getKibanaCluster(upInfo.getClusterId(), showMetadata, showPlans, showPlanLogs, showPlanDefaults)
         ));
-
     }
-
 }

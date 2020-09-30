@@ -9,19 +9,13 @@
 package org.estf.gradle;
 
 import co.elastic.cloud.api.client.ClusterClient;
-import co.elastic.cloud.api.model.generated.ElasticsearchClusterPlan;
-import co.elastic.cloud.api.model.generated.KibanaClusterPlan;
-import co.elastic.cloud.api.model.generated.ClusterCrudResponse;
-import co.elastic.cloud.api.model.generated.ClusterUpgradeInfo;
 import co.elastic.cloud.api.client.generated.ClustersElasticsearchApi;
 import co.elastic.cloud.api.client.generated.ClustersKibanaApi;
-import co.elastic.cloud.api.model.generated.ElasticsearchScriptTypeSettings;
-import co.elastic.cloud.api.model.generated.ElasticsearchScriptingUserSettings;
-import co.elastic.cloud.api.model.generated.ElasticsearchSystemSettings;
+import co.elastic.cloud.api.model.generated.*;
 import co.elastic.cloud.api.util.Waiter;
 import org.gradle.api.DefaultTask;
-import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.TaskAction;
 
 public class EditCloudCluster extends DefaultTask {
 

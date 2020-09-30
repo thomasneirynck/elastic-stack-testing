@@ -8,15 +8,16 @@
 
 package org.estf.gradle;
 
-import io.swagger.client.ApiClient;
 import co.elastic.cloud.api.builder.ApiClientBuilder;
 import co.elastic.cloud.api.builder.SaaSAuthenticationRequestBuilder;
-import co.elastic.cloud.api.client.SaaSAuthenticationApi;
 import co.elastic.cloud.api.client.ClusterClient;
+import co.elastic.cloud.api.client.SaaSAuthenticationApi;
 import co.elastic.cloud.api.model.generated.ElasticsearchClusterInfo;
 import co.elastic.cloud.api.model.generated.KibanaClusterInfo;
-import java.net.*;
-import java.io.*;
+import io.swagger.client.ApiClient;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 
 public class CloudApi {

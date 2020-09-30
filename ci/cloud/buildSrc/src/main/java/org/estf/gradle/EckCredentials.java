@@ -8,21 +8,18 @@
 package org.estf.gradle;
 
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.tasks.TaskAction;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import com.bettercloud.vault.*;
-import static java.lang.System.*;
-import java.util.Map;
-import com.google.gson.Gson;
+import com.bettercloud.vault.Vault;
+import com.bettercloud.vault.VaultConfig;
+import com.bettercloud.vault.VaultException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.gradle.api.tasks.Input;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.io.IOException;
-import org.gradle.api.tasks.Input;
+import java.util.Map;
 
 public class EckCredentials {
 

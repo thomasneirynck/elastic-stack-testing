@@ -8,58 +8,32 @@
 
 package org.estf.gradle;
 
-import java.nio.file.Paths;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.Channels;
-import java.io.File;
-import java.net.URL;
-import java.net.URI;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.TaskAction;
-
-import groovy.transform.ConditionalInterrupt;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.io.BufferedOutputStream;
-
-import java.util.Base64;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.FileEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpHeaders;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.ssl.*;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContextBuilder;
-import javax.net.ssl.*;
-import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
-
-import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Base64;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class UploadData extends DefaultTask {
 
@@ -75,13 +49,28 @@ public class UploadData extends DefaultTask {
     @Input
     String password;
 
+    @Input
+    String version;
+
+    @Input
+    String upgradeVersion;
+
+    int majorVersion;
+    int majorUpgradeVersion;
+
     @TaskAction
     public void run() throws IOException {
+        RestApi api = new RestApi(username, password, version, upgradeVersion);
+        majorVersion = api.setMajorVersion();
+        majorUpgradeVersion = api.setMajorUpgradeVersion();
         uploadBankAccountData();
         createBankIndexPatternAsDefault();
-        loadSampleData();
+        if (majorVersion > 5) {
+            loadSampleData();
+        }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void uploadBankAccountData() throws IOException {
         String link = "https://download.elastic.co/demos/kibana/gettingstarted/accounts.zip";
         boolean zipFile = true;
@@ -90,7 +79,8 @@ public class UploadData extends DefaultTask {
         String basicAuthPayload = "Basic " + Base64.getEncoder().encodeToString(creds.getBytes());
         HttpPost postRequest = new HttpPost(esBaseUrl + "/bank/account/_bulk?pretty");
         postRequest.setHeader(HttpHeaders.AUTHORIZATION, basicAuthPayload);
-        postRequest.setEntity(new FileEntity(new File("tmp/accounts.json"),ContentType.create("application/x-ndjson")));
+        postRequest.setEntity(new FileEntity(new File("tmp/accounts.json"),
+                                             ContentType.create("application/x-ndjson")));
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(postRequest);
         int statusCode = response.getStatusLine().getStatusCode();
@@ -99,6 +89,7 @@ public class UploadData extends DefaultTask {
         }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void downloadFile(String link, boolean zipFile) throws IOException {
         try {
             String projectPath = System.getProperty("user.dir");
@@ -123,6 +114,7 @@ public class UploadData extends DefaultTask {
         }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void unzip(String zipFilePath, String destDir) throws IOException {
         ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath));
         ZipEntry entry = zipIn.getNextEntry();
@@ -142,7 +134,7 @@ public class UploadData extends DefaultTask {
         zipIn.close();
     }
 
-
+    // -----------------------------------------------------------------------------------------------------------------
     public void extractFile(ZipInputStream zipIn, String filePath) throws IOException {
         BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filePath));
         byte[] bytesIn = new byte[4096];
@@ -153,6 +145,7 @@ public class UploadData extends DefaultTask {
         bos.close();
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void createBankIndexPatternAsDefault() throws IOException {
         String creds = username + ":" + password;
         String basicAuthPayload = "Basic " + Base64.getEncoder().encodeToString(creds.getBytes());
@@ -190,6 +183,7 @@ public class UploadData extends DefaultTask {
         }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void createNonDefaultSpace(String name, String id) throws IOException {
         String creds = username + ":" + password;
         String basicAuthPayload = "Basic " + Base64.getEncoder().encodeToString(creds.getBytes());
@@ -210,6 +204,7 @@ public class UploadData extends DefaultTask {
         }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
     public void loadSampleData() throws IOException {
         createNonDefaultSpace("Automation", "automation");
         List<String> dataList = new ArrayList<String>(6);

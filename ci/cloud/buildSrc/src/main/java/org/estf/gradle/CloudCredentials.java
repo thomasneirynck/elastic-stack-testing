@@ -8,12 +8,10 @@
 package org.estf.gradle;
 
 
-import org.gradle.api.DefaultTask;
-import org.gradle.api.tasks.TaskAction;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import com.bettercloud.vault.*;
-import static java.lang.System.*;
+import com.bettercloud.vault.Vault;
+import com.bettercloud.vault.VaultConfig;
+import com.bettercloud.vault.VaultException;
+
 import java.util.Map;
 
 

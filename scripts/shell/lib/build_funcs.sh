@@ -360,7 +360,7 @@ run_tests() {
 # ----------------------------------------------------------------------------
 run_cloud_tests() {
   if [ ! -z $ESTF_UPGRADE_CLOUD_VERSION ]; then
-    export TASK=saas_upgrade_run_kibana_tests
+    export TASK=saas_upgrade
   fi
   if [ -z $TASK ]; then
     echo_error "Gradle task name must be supplied"
