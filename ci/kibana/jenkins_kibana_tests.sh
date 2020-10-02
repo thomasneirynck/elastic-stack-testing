@@ -749,8 +749,11 @@ function install_kibana() {
 # Method to set percy target branch
 # -----------------------------------------------------------------------------
 function set_percy_target_branch() {
-  export PERCY_TARGET_BRANCH=$(git branch | grep \* | cut -d ' ' -f2)
-  export PERCY_BRANCH=$PERCY_TARGET_BRANCH
+  get_branch
+  export PERCY_TARGET_BRANCH=$Glb_Kibana_Branch
+  export PERCY_BRANCH=${branch_specifier##*refs\/heads\/}
+  echo_info "PERCY_BRANCH: $PERCY_BRANCH"
+  echo_info "PERCY_TARGET_BRANCH: $PERCY_TARGET_BRANCH"
 }
 
 # -----------------------------------------------------------------------------
@@ -1543,7 +1546,7 @@ function run_cloud_xpack_ext_tests() {
 function run_visual_tests_oss() {
   check_percy_pkg
   run_ci_setup
-  set_percy_branch
+  set_percy_target_branch
 
   TEST_KIBANA_BUILD=oss
   install_kibana
@@ -1551,7 +1554,7 @@ function run_visual_tests_oss() {
   export TEST_BROWSER_HEADLESS=1
 
   echo_info "Running oss visual tests"
-  yarn run percy exec -t 500 -- -- \
+  yarn run percy exec -t 10000 -- -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom snapshot \
@@ -1565,7 +1568,7 @@ function run_visual_tests_oss() {
 function run_visual_tests_default() {
   check_percy_pkg
   run_ci_setup
-  set_percy_branch
+  set_percy_target_branch
 
   TEST_KIBANA_BUILD=default
   install_kibana
@@ -1573,7 +1576,7 @@ function run_visual_tests_default() {
   export TEST_BROWSER_HEADLESS=1
 
   echo_info "Running default visual tests"
-  yarn run percy exec -t 500 -- -- \
+  yarn run percy exec -t 10000 -- -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom=snapshot \
