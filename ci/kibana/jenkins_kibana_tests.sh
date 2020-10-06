@@ -1550,13 +1550,12 @@ function run_visual_tests_oss() {
 
   TEST_KIBANA_BUILD=oss
   install_kibana
-  curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/.percy.yml --output .percy.yml
 
   export TEST_BROWSER_HEADLESS=1
   export LOG_LEVEL=debug
 
   echo_info "Running oss visual tests"
-  yarn run percy exec -t 700 -- -- \
+  yarn run percy exec -- -t 700 -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom snapshot \
@@ -1574,13 +1573,12 @@ function run_visual_tests_default() {
 
   TEST_KIBANA_BUILD=default
   install_kibana
-  curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/.percy.yml --output .percy.yml
 
   export TEST_BROWSER_HEADLESS=1
   export LOG_LEVEL=debug
 
   echo_info "Running default visual tests"
-  yarn run percy exec -t 700 -- -- \
+  yarn run percy exec -- -t 700 -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
     --esFrom=snapshot \
