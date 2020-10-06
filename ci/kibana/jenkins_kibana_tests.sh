@@ -1326,6 +1326,316 @@ function run_visual_tests_default() {
     --debug
 }
 
+# -----------------------------------------------------------------------------
+# Run with timeout
+# -----------------------------------------------------------------------------
+function run_with_timeout {
+  cmd="$1"; timeout="$2";
+  grep -qP '^\d+$' <<< $timeout || timeout=10
+  (
+    eval "$cmd" &
+    child=$!
+    trap -- "" SIGTERM
+    (
+      sleep $timeout
+      kill $child 2> /dev/null
+    ) &
+    wait $child
+  )
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_es_ready() {
+  while true; do
+    docker logs es01 | grep -E -i -w '(es01.*to \[GREEN\])|(to \[GREEN\].*elasticsearch)'
+
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_es_ready {
+  local timeout=${1:-40}
+  run_with_timeout _wait_for_es_ready $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Elasticsearch server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_kbn_ready {
+  while true; do
+    docker logs kib01 | grep -E -i -w 'Kibana.*http server running at'
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_kbn_ready {
+  local timeout=${1:-90}
+  run_with_timeout _wait_for_kbn_ready $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Kibana server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method docker load
+# -----------------------------------------------------------------------------
+function docker_load {
+  local type=${1:-oss}
+
+  get_build_server
+  get_version
+  get_os
+  get_branch
+  get_kibana_pkg
+  get_kibana_url
+
+  echo_info $Glb_Kibana_Url
+  echo_info $Glb_Es_Url
+
+  echo_info "Run docker elasticsearch load..."
+  curl -s "${Glb_Es_Url}" | docker load -i /dev/stdin
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Failed to load elasticsearch docker"
+  fi
+
+  echo_info "Run docker kibana load..."
+  curl -s "${Glb_Kibana_Url}" | docker load -i /dev/stdin
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Failed to load kibana docker"
+  fi
+
+  if [ "$type" == "oss" ]; then
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/oss/docker-compose.yml --output docker-compose.yml
+
+    echo_info "Run docker compose up..."
+    docker-compose up -d
+    if [ $? -ne 0 ]; then
+        echo_error_exit "Docker compose up failed"
+    fi
+    wait_for_es_ready
+    wait_for_kbn_ready
+
+    export TEST_KIBANA_PROTOCOL=http
+    export TEST_KIBANA_PORT=5601
+    export TEST_ES_PROTOCOL=http
+    export TEST_ES_PORT=9200
+
+  else
+
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/kibana.yml --output kibana.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/create-certs.yml --output create-certs.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/elastic-docker-tls.yml --output elastic-docker-tls.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/instances.yml --output instances.yml
+
+    export COMPOSE_PROJECT_NAME=es
+    export CERTS_DIR=/usr/share/elasticsearch/config/certificates
+
+    echo_info "Run docker compose run for cert setup..."
+    docker-compose -f create-certs.yml run --rm create_certs
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose create certs failed"
+    fi
+
+    echo_info "Run docker compose up for passwords setup..."
+    docker-compose -f elastic-docker-tls.yml up -d
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose failed"
+    fi
+
+    echo_info "Run setup passwords..."
+    docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords auto --batch \
+                                   --url https://localhost:9200 > passwords.txt"
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Elasticsearch setup passwords failed"
+    fi
+
+    espw=$(docker exec es01 /bin/bash -c "grep \"PASSWORD elastic\" passwords.txt" | awk '{print $4}')
+    kbnpw=$(docker exec es01 /bin/bash -c "grep \"PASSWORD kibana_system\" passwords.txt" | awk '{print $4}')
+
+    echo_info "Run docker compose stop..."
+    docker-compose -f elastic-docker-tls.yml stop
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose stop failed"
+    fi
+
+    echo_info "Run docker compose up..."
+    sed -i "s/CHANGEME/$kbnpw/g" elastic-docker-tls.yml
+    docker-compose -f elastic-docker-tls.yml up -d
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Docker compose up failed"
+    fi
+    wait_for_es_ready
+    wait_for_kbn_ready
+
+    export TEST_KIBANA_PROTOCOL=https
+    export TEST_KIBANA_PORT=5601
+    export TEST_KIBANA_USER=elastic
+    export TEST_KIBANA_PASS=$espw
+    export TEST_ES_PROTOCOL=https
+    export TEST_ES_PORT=9200
+    export TEST_ES_USER=elastic
+    export TEST_ES_PASS=$espw
+    export NODE_TLS_REJECT_UNAUTHORIZED=0
+    export TEST_IGNORE_CERT_ERRORS=1
+
+  fi
+
+}
+
+# -----------------------------------------------------------------------------
+# Method to run oss tests from Kibana repo, ones in test/ directory for docker
+# -----------------------------------------------------------------------------
+function run_docker_oss_tests() {
+  echo_info "In run_docker_oss_tests"
+  local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  TEST_KIBANA_BUILD=oss
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+  includeTags=$(update_config "test/functional/config.js" $testGrp)
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "oss"
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running docker oss functional tests, run $i of $maxRuns"
+    eval node scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker OSS Test failed!"
+}
+
+# -----------------------------------------------------------------------------
+# Method to run docker xpack tests
+# -----------------------------------------------------------------------------
+function run_docker_xpack_func_tests() {
+  echo_info "In run_docker_xpack_func_tests"
+  local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  TEST_KIBANA_BUILD=$(random_docker_image)
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+
+  includeTags=$(update_config "x-pack/test/functional/config.js" $testGrp)
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "x-pack"
+
+  local _xpack_dir="$(cd x-pack; pwd)"
+  echo_info "-> XPACK_DIR ${_xpack_dir}"
+  cd "$_xpack_dir"
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    export ESTF_RUN_NUMBER=$i
+    update_report_name "test/functional/config.js"
+
+    echo_info " -> Running cloud xpack func tests, run $i of $maxRuns"
+    eval node ../scripts/functional_test_runner \
+          --config test/functional/config.js \
+          --debug " $includeTags"
+    if [ $? -ne 0 ]; then
+      failures=1
+    fi
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker X-Pack Test failed!"
+}
+
+# -----------------------------------------------------------------------------
+# Method to run docker xpack tests
+# -----------------------------------------------------------------------------
+function run_docker_xpack_ext_tests() {
+  local testGrp=$1
+  local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+
+  echo_info "In run_docker_xpack_ext_tests"
+  local funcTests="${1:- false}"
+
+  TEST_KIBANA_BUILD=$(random_docker_image)
+  TEST_KIBANA_DOCKER=true
+
+  run_ci_setup
+
+  update_test_files
+
+  export TEST_BROWSER_HEADLESS=1
+
+  docker_load "x-pack"
+
+  local _xpack_dir="$(cd x-pack; pwd)"
+  echo_info "-> XPACK_DIR ${_xpack_dir}"
+  cd "$_xpack_dir"
+
+  varcfg="Glb_${testGrp}Cfg"
+  cfgs=${!varcfg}
+
+  failures=0
+  for i in $(seq 1 1 $maxRuns); do
+    for cfg in $cfgs; do
+      if [ $cfg == "test/functional/config.js" ] && [ $funcTests == "false" ]; then
+        continue
+      fi
+      if [ ! -f $cfg ]; then
+        echo "Warning invalid configuration: $cfg"
+        continue
+      fi
+      export ESTF_RUN_NUMBER=$i
+      update_report_name $cfg
+
+      echo " -> Running docker xpack ext tests config: $cfg, run $i of $maxRuns"
+      node ../scripts/functional_test_runner \
+        --config $cfg \
+        --debug
+      if [ $? -ne 0 ]; then
+        failures=1
+      fi
+    done
+  done
+
+  run_ci_cleanup
+
+  exit_script $failures "Docker X-Pack Ext Test failed!"
+}
+
 # *****************************************************************************
 # SECTION: Test grouping functions
 # *****************************************************************************
