@@ -1699,7 +1699,7 @@ function docker_load {
 
   else
 
-    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/cloud/product/settings/kibana.yml --output kibana.yml
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/kibana.yml --output kibana.yml
     curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/create-certs.yml --output create-certs.yml
     curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/elastic-docker-tls.yml --output elastic-docker-tls.yml
     curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/instances.yml --output instances.yml
