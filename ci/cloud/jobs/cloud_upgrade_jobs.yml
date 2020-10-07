@@ -1,6 +1,6 @@
 TASK:
   - saas_upgrade
-JOBS:
+JOB:
   - upgradeTest1
   - upgradeTest2
 

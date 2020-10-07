@@ -175,13 +175,13 @@ task saas_run_kibana_tests {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-def jobs = System.env.JOBS ?: ""
+def job = System.env.JOB ?: ""
 def _upgrade_cloud_version = ""
-if (jobs) {
+if (job) {
     def jsonSlurper = new JsonSlurper()
     def data = jsonSlurper.parseText(new File("$projectDir/upgrade_paths.json").text)
-    if (data["$jobs"]) {
-        def testpaths = data["$jobs"].split(',')
+    if (data["$job"]) {
+        def testpaths = data["$job"].split(',')
         if (testpaths.size() != 3) {
             throw new Exception("Test path is malformed!")
         }
