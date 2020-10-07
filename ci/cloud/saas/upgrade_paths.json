@@ -1,0 +1,4 @@
+{
+  "upgradeTest1": "6.8,6.8.13-SNAPSHOT,7.10.0-SNAPSHOT",
+  "upgradeTest2": "7.9,7.9.3-SNAPSHOT,7.10.0-SNAPSHOT"
+}

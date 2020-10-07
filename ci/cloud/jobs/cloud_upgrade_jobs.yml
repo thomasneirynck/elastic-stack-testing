@@ -1,0 +1,7 @@
+TASK:
+  - saas_upgrade
+JOBS:
+  - upgradeTest1
+  - upgradeTest2
+
+exclude: ~
