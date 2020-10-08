@@ -1422,6 +1422,7 @@ function docker_load {
   fi
 
   if [ "$type" == "oss" ]; then
+    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/oss/kibana.yml --output kibana.yml
     curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/oss/docker-compose.yml --output docker-compose.yml
 
     echo_info "Run docker compose up..."
