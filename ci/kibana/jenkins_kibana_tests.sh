@@ -149,7 +149,7 @@ function create_kbn_install_dir() {
   if [ ! -z $Glb_Install_Dir ]; then
     return
   fi
-  Glb_Install_Dir="$(pwd)/kibana-build"
+  Glb_Install_Dir="/tmp/kibana-build_${JOB}_$((( RANDOM % 10000 ) + 1 ))_$((( RANDOM % 10000 ) + 1 ))"
   mkdir -p "$Glb_Install_Dir"
   readonly Glb_Install_Dir
 }
@@ -1609,7 +1609,7 @@ function run_with_timeout {
 # -----------------------------------------------------------------------------
 function _wait_for_es_ready() {
   while true; do
-    docker logs es01 | grep -E -i -w '(es01.*to \[GREEN\])|(to \[GREEN\].*elasticsearch)'
+    docker logs es01 | grep -E -i -w '(es01.*to \[GREEN\])|(to \[GREEN\].*elasticsearch)|(es01.*started)'
 
     if [ $? -eq 0 ]; then
       break
