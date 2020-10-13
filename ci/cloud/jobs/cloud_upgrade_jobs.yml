@@ -3,5 +3,9 @@ TASK:
 JOB:
   - upgradeTest1
   - upgradeTest2
+  - upgradeTest3 
+  - upgradeTest4
+  - upgradeTest5 
+  - upgradeTest6 
 
 exclude: ~
