@@ -182,7 +182,7 @@ if (job) {
     def data = jsonSlurper.parseText(new File("$projectDir/upgrade_paths.json").text)
     if (data["$job"]) {
         def testpaths = data["$job"].split(',')
-        if (testpaths.size() != 3) {
+        if (testpaths.size() < 3) {
             throw new Exception("Test path is malformed!")
         }
         project.ext.set("_kibana_version", testpaths[0])
