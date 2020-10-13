@@ -149,7 +149,7 @@ function create_kbn_install_dir() {
   if [ ! -z $Glb_Install_Dir ]; then
     return
   fi
-  Glb_Install_Dir="/tmp/kibana-build_${JOB}_$((( RANDOM % 10000 ) + 1 ))_$((( RANDOM % 10000 ) + 1 ))"
+  Glb_Install_Dir="$(pwd)/kibana-build"
   mkdir -p "$Glb_Install_Dir"
   readonly Glb_Install_Dir
 }
