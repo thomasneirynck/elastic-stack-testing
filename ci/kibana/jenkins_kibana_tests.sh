@@ -2068,8 +2068,7 @@ function random_docker_image() {
 # SECTION: Cloud/Docker Configurations
 # ****************************************************************************
 
-Glb_xpackExtGrp1Cfg="test/alerting_api_integration/basic/config.ts
-                     test/api_integration/config.js
+Glb_xpackExtGrp1Cfg="test/api_integration/config.js
                      test/api_integration/config.ts
                      test/apm_api_integration/trial/config.ts
                      test/case_api_integration/basic/config.ts
