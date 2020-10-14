@@ -91,6 +91,15 @@
         password: "{{ elasticsearch_password }}"
         status_code: 200
 
+    - name: Clean out kibana index which stores stateful data
+      uri:
+        method: DELETE
+        url: "https://{{ current_host_ip }}:{{ elasticsearch_port }}/.kibana*"
+        validate_certs: no
+        user: "{{ elasticsearch_username }}"
+        password: "{{ elasticsearch_password }}"
+        status_code: 200
+
     - name: Start kibana
       include_role:
         name: kibana
