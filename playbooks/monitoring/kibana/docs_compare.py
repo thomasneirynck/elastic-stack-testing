@@ -31,6 +31,12 @@ def handle_special_case_kibana_stats(legacy_doc, metricbeat_doc):
   metricbeat_doc["kibana_stats"]["os"]["cpuacct"] = legacy_doc["kibana_stats"]["os"]["cpuacct"]
   metricbeat_doc["kibana_stats"]["os"]["cpu"] = legacy_doc["kibana_stats"]["os"]["cpu"]
 
+  # Lens usage stats do not report consistently. https://github.com/elastic/kibana/issues/80983
+  metricbeat_doc["kibana_stats"]["usage"]["lens"] = legacy_doc["kibana_stats"]["usage"]["lens"]
+
+  # Actions usage stats do not report consistently. https://github.com/elastic/kibana/issues/80986
+  metricbeat_doc["kibana_stats"]["usage"]["actions"] = legacy_doc["kibana_stats"]["usage"]["actions"]
+
 def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
     if doc_type == "kibana_settings":
         handle_special_case_kibana_settings(legacy_doc, metricbeat_doc)
