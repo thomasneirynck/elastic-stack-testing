@@ -94,7 +94,7 @@
     - name: Clean out kibana index which stores stateful data
       uri:
         method: DELETE
-        url: "https://{{ current_host_ip }}:{{ elasticsearch_port }}/.kibana*"
+        url: "https://{{ current_host_ip }}:{{ elasticsearch_port }}/.kibana_1"
         validate_certs: no
         user: "{{ elasticsearch_username }}"
         password: "{{ elasticsearch_password }}"
