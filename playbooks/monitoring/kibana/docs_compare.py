@@ -12,6 +12,14 @@ allowed_deletions_from_metricbeat_docs_extra = [
   'kibana_stats.response_times.average'
 ]
 
+unused_kibana_usage_properties = [
+  "apm",
+  "localization",
+  "lens",
+  "actions",
+  "alerts"
+]
+
 def handle_special_case_kibana_settings(legacy_doc, metricbeat_doc):
   # Legacy collection will index kibana_settings.xpack.default_admin_email as null
   # whereas Metricbeat collection simply won't index it. So if we find kibana_settings.xpack.default_admin_email 
@@ -31,14 +39,20 @@ def handle_special_case_kibana_stats(legacy_doc, metricbeat_doc):
   metricbeat_doc["kibana_stats"]["os"]["cpuacct"] = legacy_doc["kibana_stats"]["os"]["cpuacct"]
   metricbeat_doc["kibana_stats"]["os"]["cpu"] = legacy_doc["kibana_stats"]["os"]["cpu"]
 
-  # Actions usage stats do not report consistently. https://github.com/elastic/kibana/issues/80986
-  metricbeat_doc["kibana_stats"]["usage"]["actions"] = legacy_doc["kibana_stats"]["usage"]["actions"]
-  metricbeat_doc["kibana_stats"]["usage"]["alerts"] = legacy_doc["kibana_stats"]["usage"]["alerts"]
+def filter_kibana_usage_stats(legacy_doc, metricbeat_doc):
+  for i in unused_kibana_usage_properties: 
+    del metricbeat_doc["kibana_stats"]["usage"][i]
+    del legacy_doc["kibana_stats"]["usage"][i]
 
 def handle_special_cases(doc_type, legacy_doc, metricbeat_doc):
     if doc_type == "kibana_settings":
         handle_special_case_kibana_settings(legacy_doc, metricbeat_doc)
     if doc_type == "kibana_stats":
+        # Lens, Actions, and other usage stats might not report consistently.
+        # https://github.com/elastic/kibana/issues/80983
+        # https://github.com/elastic/kibana/issues/80986
+        # so, we filter out w/e we don't use (or might change)
+        filter_kibana_usage_stats(legacy_doc, metricbeat_doc)
         handle_special_case_kibana_stats(legacy_doc, metricbeat_doc)
 
 
