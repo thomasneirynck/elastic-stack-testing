@@ -1,0 +1,17 @@
+#-----------------------------------------------------------------------------------------------------------------------
+# Elasticsearch API request
+#
+# Author: liza.dayoub@elastic.co
+#-----------------------------------------------------------------------------------------------------------------------
+---
+
+- name: Verify Kibana is active
+  uri:
+    url: "http://{{ current_host_ip }}:{{ kibana_port }}/api/status"
+    method: GET
+    return_content: yes
+    force_basic_auth: yes
+    status_code: 200
+  register: kibana_api_status_output
+  failed_when: "'{{  kibana_api_status_output.json.status.overall.state }}' != 'green'"
+  when: '{{ check_kibana_active|default(True) }}'
