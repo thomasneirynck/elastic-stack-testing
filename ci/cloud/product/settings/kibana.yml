@@ -3,6 +3,7 @@ logging.verbose: true
 server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 telemetry.banner: false
 vis_type_timelion.ui.enabled: true
+data.search.aggs.shardDelay.enabled: true
 xpack.encryptedSavedObjects.encryptionKey: "DkdXazszSCYexXqz4YktBGHCRkV6hyNK"
 xpack.maps.preserveDrawingBuffer: true
 xpack.maps.showMapsInspectorAdapter: true
