@@ -1361,6 +1361,7 @@ function run_cloud_oss_tests() {
   echo_info "In run_cloud_oss_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
+  local runWithSuperUser="${ESTF_RUN_SUPERUSER:-no}"
 
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
@@ -1369,6 +1370,10 @@ function run_cloud_oss_tests() {
   export TEST_BROWSER_HEADLESS=1
   # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
   export TEST_CLOUD=1
+
+  if [[ "$runWithSuperUser" == "yes" ]] && [[ ! -z $TEST_KIBANA_PASS ]]; then
+    sed -i "s/PageObjects.login.login('test_user', 'changeme');/PageObjects.login.login('elastic', '$TEST_KIBANA_PASS');/g" test/functional/page_objects/common_page.ts
+  fi
 
   failures=0
   for i in $(seq 1 1 $maxRuns); do
