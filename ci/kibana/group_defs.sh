@@ -22,10 +22,10 @@ xpackGrp1="advanced_settings
            grok_debugger
            index_lifecycle_management
            index_management
+           index_patterns
            license_management
            maps
            reporting_management
-           transform
           "
 
 xpackGrp2="canvas
@@ -33,8 +33,8 @@ xpackGrp2="canvas
            dev_tools
            discover
            graph
-           index_patterns
            infra
+           lens
            logstash
            status_page
            timelion
@@ -43,14 +43,14 @@ xpackGrp2="canvas
            watcher
           "
 
-xpackGrp3="dashboard
-           lens
-           machine_learning
+xpackGrp3="machine_learning
            ml
+           transform
            visualize
           "
 
 xpackGrp4="api_keys
+           dashboard
            ingest_pipelines
            monitoring
            remote_clusters
