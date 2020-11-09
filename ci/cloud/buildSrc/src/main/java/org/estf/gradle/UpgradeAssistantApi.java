@@ -65,7 +65,7 @@ public class UpgradeAssistantApi extends DefaultTask {
             } else if (majorVersion == 6) {
                 runMigrationAssistant6(api);
             } else {
-                System.out.println("Major upgrade from 7.x not yet supported");
+                throw new IOException("Major upgrade from 7.x not yet supported");
                 // Ref: https://github.com/elastic/kibana/issues/76837
                 //runUpgradeAssistantStatus(api);
             }
