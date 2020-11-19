@@ -1832,8 +1832,8 @@ function run_docker_xpack_func_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running cloud xpack func tests, run $i of $maxRuns"
-    eval node ../scripts/functional_test_runner \
+    echo_info " -> Running docker xpack func tests, run $i of $maxRuns"
+    eval node --no-warnings ../scripts/functional_test_runner \
           --config test/functional/config.js \
           --debug " $includeTags"
     if [ $? -ne 0 ]; then
@@ -1888,7 +1888,7 @@ function run_docker_xpack_ext_tests() {
       update_report_name $cfg
 
       echo " -> Running docker xpack ext tests config: $cfg, run $i of $maxRuns"
-      node ../scripts/functional_test_runner \
+      node --no-warnings ../scripts/functional_test_runner \
         --config $cfg \
         --debug
       if [ $? -ne 0 ]; then
