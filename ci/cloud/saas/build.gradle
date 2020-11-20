@@ -34,6 +34,8 @@ def genSetupTask(testname) {
             kbnReportsTesting = true
         } else if (System.env.JOB == "xpackExtGrp1") {
             mlTesting = true
+        } else if (System.env.JOB == "xpackExtGrp2") {
+            ingestNodeTesting = true
         }
         if (System.env.ESTF_ML_TESTING) {
             mlTesting = true
