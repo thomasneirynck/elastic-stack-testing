@@ -280,6 +280,11 @@ public class CreateCloudCluster extends DefaultTask {
                 .setElasticsearch(esCfg)
                 .setClusterTopology(Arrays.asList(esTopo, mlTopo, ingestTopo))
                 .build();
+        } else if (ingestNodeTesting) {
+            plan = new ElasticsearchClusterPlanBuilder()
+                .setElasticsearch(esCfg)
+                .setClusterTopology(Arrays.asList(esTopo, ingestTopo))
+                .build();
         } else if (mlTesting) {
             plan = new ElasticsearchClusterPlanBuilder()
                 .setElasticsearch(esCfg)

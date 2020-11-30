@@ -189,7 +189,7 @@ if (job) {
         }
         project.ext.set("_kibana_version", testpaths[0])
         project.ext.set("_cloud_version", testpaths[1])
-        _upgrade_cloud_version = testpaths[2]
+        _upgrade_cloud_version = Arrays.copyOfRange(testpaths, 1, testpaths.length)
     }
 }
 
