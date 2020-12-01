@@ -40,14 +40,34 @@ export_env_vars() {
     elif [[ "$ES_BUILD_SERVER" =~ "staging" ]] && [[ "$ES_BUILD_VERSION" =~ "SNAPSHOT" ]]; then
       ARTIFACTS_BASE_URL="https://artifacts-api.elastic.co/v1/versions/${ES_BUILD_VERSION//[!0-9.]/}/builds/latest"
     fi
-    export LATEST_BUILD_ID=$(curl -s ${ARTIFACTS_BASE_URL} | jq -r .build.build_id)
+    echo_debug "ES_BUILD_VERSION: $ES_BUILD_VERSION"
+    echo_debug "ARTIFACTS_BASE_URL: $ARTIFACTS_BASE_URL"
+    # Get latest build id, sometimes this comes back null so retry
+    retry=0
+    maxRetries=10
+    retryInterval=5
+    until [ ${retry} -ge ${maxRetries} ]
+    do
+      LATEST_BUILD_ID=$(curl -s ${ARTIFACTS_BASE_URL} | jq -r .build.build_id)
+      echo_debug "LATEST_BUILD_ID: $LATEST_BUILD_ID"
+      if [[ $LATEST_BUILD_ID != "null" ]]; then
+        break;
+      fi
+      retry=$[${retry}+1]
+      echo_debug "Retrying [${retry}/${maxRetries}] in ${retryInterval}(s)"
+      sleep ${retryInterval}
+    done
+
+    if [ ${retry} -ge ${maxRetries} ]; then
+      echo_error "Failed to get LATEST_BUILD_ID after ${maxRetries} attempts!"
+    fi
+
+    export LATEST_BUILD_ID
     export ES_BUILD_URL="${ES_BUILD_SERVER}.elastic.co/$LATEST_BUILD_ID"
-    echo $ES_BUILD_URL
+    echo_debug "ES_BUILD_URL: $ES_BUILD_URL"
   fi
 
-
   env | sort
-
 }
 
 # ----------------------------------------------------------------------------
