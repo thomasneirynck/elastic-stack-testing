@@ -36,7 +36,6 @@ def genSetupTask(testname) {
             mlTesting = true
         } else if (System.env.JOB == "xpackExtGrp2") {
             ingestNodeTesting = true
-            mlTesting = true
         }
         if (System.env.ESTF_ML_TESTING) {
             mlTesting = true
