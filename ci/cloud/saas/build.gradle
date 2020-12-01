@@ -36,6 +36,7 @@ def genSetupTask(testname) {
             mlTesting = true
         } else if (System.env.JOB == "xpackExtGrp2") {
             ingestNodeTesting = true
+            mlTesting = true
         }
         if (System.env.ESTF_ML_TESTING) {
             mlTesting = true
@@ -195,7 +196,10 @@ if (job) {
 
 def upgrade_versions = System.env.ESTF_UPGRADE_CLOUD_VERSION ?: _upgrade_cloud_version
 if (upgrade_versions) {
-    def versions = upgrade_versions.split(',');
+    def versions = upgrade_versions
+    if(upgrade_versions instanceof String) {
+        versions = upgrade_versions.split(',')
+    }
     versions.size().times {
         def i = it
         def value = versions[it]
