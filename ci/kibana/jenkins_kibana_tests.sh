@@ -1375,13 +1375,18 @@ function run_cloud_oss_tests() {
     sed -i "s/PageObjects.login.login('test_user', 'changeme');/PageObjects.login.login('elastic', '$TEST_KIBANA_PASS');/g" test/functional/page_objects/common_page.ts
   fi
 
+  nodeOpts=" "
+  if [ ! -z $NODE_TLS_REJECT_UNAUTHORIZED ] && [[ $NODE_TLS_REJECT_UNAUTHORIZED -eq 0 ]]; then
+    nodeOpts="--no-warnings "
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
     echo_info " -> Running cloud oss functional tests, run $i of $maxRuns"
-    eval node scripts/functional_test_runner \
+    eval node $nodeOpts scripts/functional_test_runner \
           --config test/functional/config.js \
           --exclude-tag skipCloud \
           --debug " $includeTags"
@@ -1415,13 +1420,18 @@ function run_cloud_xpack_func_tests() {
   # To fix FTR ssl certificate issue: https://github.com/elastic/kibana/pull/73317
   export TEST_CLOUD=1
 
+  nodeOpts=" "
+  if [ ! -z $NODE_TLS_REJECT_UNAUTHORIZED ] && [[ $NODE_TLS_REJECT_UNAUTHORIZED -eq 0 ]]; then
+    nodeOpts="--no-warnings "
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
     echo_info " -> Running cloud xpack func tests, run $i of $maxRuns"
-    eval node ../scripts/functional_test_runner \
+    eval node $nodeOpts ../scripts/functional_test_runner \
           --config test/functional/config.js \
           --exclude-tag skipCloud \
           --debug " $includeTags"
@@ -1516,6 +1526,11 @@ function run_cloud_xpack_ext_tests() {
   echo_info "-> XPACK_DIR ${_xpack_dir}"
   cd "$_xpack_dir"
 
+  nodeOpts=" "
+  if [ ! -z $NODE_TLS_REJECT_UNAUTHORIZED ] && [[ $NODE_TLS_REJECT_UNAUTHORIZED -eq 0 ]]; then
+    nodeOpts="--no-warnings "
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     for cfg in $cfgs; do
@@ -1530,7 +1545,7 @@ function run_cloud_xpack_ext_tests() {
       update_report_name $cfg
 
       echo " -> Running cloud xpack ext tests config: $cfg, run $i of $maxRuns"
-      node ../scripts/functional_test_runner \
+      node $nodeOpts ../scripts/functional_test_runner \
         --config $cfg \
         --exclude-tag skipCloud \
         --debug
@@ -1827,13 +1842,18 @@ function run_docker_xpack_func_tests() {
   echo_info "-> XPACK_DIR ${_xpack_dir}"
   cd "$_xpack_dir"
 
+  nodeOpts=" "
+  if [ ! -z $NODE_TLS_REJECT_UNAUTHORIZED ] && [[ $NODE_TLS_REJECT_UNAUTHORIZED -eq 0 ]]; then
+    nodeOpts="--no-warnings "
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
     echo_info " -> Running docker xpack func tests, run $i of $maxRuns"
-    eval node --no-warnings ../scripts/functional_test_runner \
+    eval node $nodeOpts ../scripts/functional_test_runner \
           --config test/functional/config.js \
           --debug " $includeTags"
     if [ $? -ne 0 ]; then
@@ -1874,6 +1894,11 @@ function run_docker_xpack_ext_tests() {
   varcfg="Glb_${testGrp}Cfg"
   cfgs=${!varcfg}
 
+  nodeOpts=" "
+  if [ ! -z $NODE_TLS_REJECT_UNAUTHORIZED ] && [[ $NODE_TLS_REJECT_UNAUTHORIZED -eq 0 ]]; then
+    nodeOpts="--no-warnings "
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     for cfg in $cfgs; do
@@ -1888,7 +1913,7 @@ function run_docker_xpack_ext_tests() {
       update_report_name $cfg
 
       echo " -> Running docker xpack ext tests config: $cfg, run $i of $maxRuns"
-      node --no-warnings ../scripts/functional_test_runner \
+      node $nodeOpts ../scripts/functional_test_runner \
         --config $cfg \
         --debug
       if [ $? -ne 0 ]; then
