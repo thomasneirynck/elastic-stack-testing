@@ -31,8 +31,27 @@ export_env_vars() {
 
   # Added to get latest build from server
   if [ ! -z $ES_BUILD_SERVER ] && [ ! -z $ES_BUILD_BRANCH ]; then
-    # Translate branch to a version
-    ES_BUILD_VERSION=$(curl -s "https://artifacts-api.elastic.co/v1/branches/${ES_BUILD_BRANCH##*/}" | jq -r .branch.builds[0].version)
+
+    # Translate branch to a version, sometimes this comes back null so retry
+    retry=0
+    maxRetries=10
+    retryInterval=5
+    until [ ${retry} -ge ${maxRetries} ]
+    do
+      ES_BUILD_VERSION=$(curl -s "https://artifacts-api.elastic.co/v1/branches/${ES_BUILD_BRANCH##*/}" | jq -r .branch.builds[0].version)
+      echo_debug "ES_BUILD_VERSION: $ES_BUILD_VERSION"
+      if [ ! -z $ES_BUILD_VERSION ] && [[ $ES_BUILD_VERSION != "null" ]]; then
+        break;
+      fi
+      retry=$[${retry}+1]
+      echo_debug "Retrying [${retry}/${maxRetries}] in ${retryInterval}(s)"
+      sleep ${retryInterval}
+    done
+
+    if [ ${retry} -ge ${maxRetries} ]; then
+      echo_error "Failed to get ES_BUILD_VERSION after ${maxRetries} attempts!"
+    fi
+
     # Find latest build based on the version
     ARTIFACTS_BASE_URL="https://artifacts-api.elastic.co/v1/versions/${ES_BUILD_VERSION}/builds/latest"
     if [[ "$ES_BUILD_SERVER" =~ "snapshots" ]] && [[ "$ES_BUILD_VERSION" != *"SNAPSHOT"* ]]; then
@@ -40,8 +59,10 @@ export_env_vars() {
     elif [[ "$ES_BUILD_SERVER" =~ "staging" ]] && [[ "$ES_BUILD_VERSION" =~ "SNAPSHOT" ]]; then
       ARTIFACTS_BASE_URL="https://artifacts-api.elastic.co/v1/versions/${ES_BUILD_VERSION//[!0-9.]/}/builds/latest"
     fi
+
     echo_debug "ES_BUILD_VERSION: $ES_BUILD_VERSION"
     echo_debug "ARTIFACTS_BASE_URL: $ARTIFACTS_BASE_URL"
+
     # Get latest build id, sometimes this comes back null so retry
     retry=0
     maxRetries=10
@@ -50,7 +71,7 @@ export_env_vars() {
     do
       LATEST_BUILD_ID=$(curl -s ${ARTIFACTS_BASE_URL} | jq -r .build.build_id)
       echo_debug "LATEST_BUILD_ID: $LATEST_BUILD_ID"
-      if [[ $LATEST_BUILD_ID != "null" ]]; then
+      if  [ ! -z $LATEST_BUILD_ID ] && [[ $LATEST_BUILD_ID != "null" ]]; then
         break;
       fi
       retry=$[${retry}+1]
@@ -64,6 +85,7 @@ export_env_vars() {
 
     export LATEST_BUILD_ID
     export ES_BUILD_URL="${ES_BUILD_SERVER}.elastic.co/$LATEST_BUILD_ID"
+
     echo_debug "ES_BUILD_URL: $ES_BUILD_URL"
   fi
 
