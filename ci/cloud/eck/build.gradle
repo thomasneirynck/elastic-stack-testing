@@ -22,6 +22,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 
+import org.yaml.snakeyaml.Yaml;
+
 plugins {
   id 'org.ajoberstar.grgit' version '4.0.2' apply false
 }
@@ -180,12 +182,18 @@ task install_eck() {
  */
 
 // *********************************************************************************
-def updateSpec(filename, image) {
-    File file = new File(filename)
-    String fileContents = file.getText('UTF-8')
-    fileContents = fileContents.replace('<version>', "${getenv_var['cloud_ver']}")
-    fileContents = fileContents.replace('<image>', image)
-    file.write(fileContents)
+def updateSpec(type, filename, image) {
+  Yaml yaml = new Yaml();
+  File file = new File(filename)
+  Map map = yaml.load(file.newInputStream());
+  map["spec"]["version"] = "${getenv_var['cloud_ver']}"
+  map["spec"]["image"] =  image
+  if ( type == "kibana") {
+    def kbnSettingsUrl = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
+                         "${getenv_var['kibana_ver']}" + "/ci/cloud/product/settings/kibana.yml"
+    map["spec"]["config"] = new URL(kbnSettingsUrl).getText('UTF-8')
+  }
+  file.write(yaml.dump(map))
 }
 
 /*
@@ -215,12 +223,7 @@ def waitForElasticsearch() {
 // *********************************************************************************
 task deploy_elasticsearch_cluster() {
   doFirst {
-    def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                  "${getenv_var['kibana_ver']}" + "/ci/cloud/eck/es-spec.yml"
-    def fileCon = new URL(fileLoc).getText('UTF-8')
-    File fp = new File("$projectDir/es-spec.yml")
-    fp.write(fileCon)
-    updateSpec("$projectDir/es-spec.yml", "${getenv_var['gcr_es']}")
+    updateSpec("elasticsearch", "$projectDir/es-spec.yml", "${getenv_var['gcr_es']}")
     def out = runShell("./kubectl apply -f" + "$projectDir/es-spec.yml",
                        "$projectDir")
     def match = (out =~ /elasticsearch(.*)created/)
@@ -356,12 +359,7 @@ def waitForKibana() {
 // *********************************************************************************
 task deploy_kibana_cluster() {
   doFirst {
-    def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                  "${getenv_var['kibana_ver']}" + "/ci/cloud/eck/kbn-spec.yml"
-    def fileCon = new URL(fileLoc).getText('UTF-8')
-    File fp = new File("$projectDir/kbn-spec.yml")
-    fp.write(fileCon)
-    updateSpec("$projectDir/kbn-spec.yml", "${getenv_var['gcr_kbn']}")
+    updateSpec("kibana", "$projectDir/kbn-spec.yml", "${getenv_var['gcr_kbn']}")
     def out = runShell("./kubectl apply -f" + "$projectDir/kbn-spec.yml",
                        "$projectDir")
     def match = (out =~ /kibana(.*)created/)

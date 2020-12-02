@@ -23,6 +23,11 @@ import java.security.cert.X509Certificate;
 
 import java.text.SimpleDateFormat;
 
+import org.yaml.snakeyaml.Yaml;
+
+import groovy.json.JsonBuilder;
+import groovy.json.JsonSlurper;
+
 plugins {
   id 'org.ajoberstar.grgit' version '4.0.2' apply false
 }
@@ -86,6 +91,20 @@ def downloadShellFile(link, name, dirname) {
       workingDir dirname
       commandLine 'sed', '-i', '/verifyHostPreconditions$/d', name
   }
+}
+
+// *********************************************************************************
+def updatePlan(type, filename) {
+  File file = new File(filename)
+  def slurped = new JsonSlurper().parseText(file.getText('UTF-8'))
+  def builder = new JsonBuilder(slurped)
+  if ( type == "kibana") {
+    def kbnSettingsUrl = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
+                         "${getenv_var['kibana_ver']}" + "/ci/cloud/product/settings/kibana.yml"
+    Map map = new Yaml().load(new URL(kbnSettingsUrl).getText('UTF-8'))
+    slurped.resources.kibana.get(0).plan.kibana.user_settings_override_json = map
+  }
+  file.write(builder.toPrettyString())
 }
 
 /*
@@ -453,13 +472,9 @@ task ecctl_create_deployment() {
     if (getenv_var['build_hash']) {
       ver =  "${getenv_var['ver_whole']}"
     }
-    def match = ""
-    def fileLoc = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
-                  "${getenv_var['kibana_ver']}" + "/ci/cloud/ece/ecePlan.json"
-    def fileCon = new URL(fileLoc).getText('UTF-8')
-    File fp = new File("$projectDir/ecePlan.json")
-    fp.write(fileCon)
+
     def plan = "$projectDir/ecePlan.json"
+    updatePlan("kibana", plan)
     def name = "ESTF__" + UUID.randomUUID().toString()
     def ip =  getIP()
     ShellCommand shell = new ShellCommand("./ecctl deployment create -f " + plan +
@@ -474,6 +489,7 @@ task ecctl_create_deployment() {
       throw new GradleException("ECCTL create deployment failed!")
     }
 
+    def match = ""
     match = (out =~ /\"username\": \"(.*)\"/)
     if (match.find()) {
       ext.es_username = match.group(1)

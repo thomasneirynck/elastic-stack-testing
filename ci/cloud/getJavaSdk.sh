@@ -34,3 +34,7 @@ wget "https://repo.maven.apache.org/maven2/org/apache/httpcomponents/httpcore/4.
 echo "Download json"
 cd ${libsDir}
 wget "https://repo.maven.apache.org/maven2/org/json/json/20180813/json-20180813.jar"
+
+echo "Download snakeyaml"
+cd ${libsDir}
+wget "https://repo1.maven.org/maven2/org/yaml/snakeyaml/1.27/snakeyaml-1.27.jar"
