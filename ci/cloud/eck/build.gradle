@@ -73,6 +73,8 @@ task getenv_var {
     ext.whole_ver = "$cloud_ver-$build_hash"
     ext.gcr_es = "gcr.io/$gc_project/elasticsearch:$whole_ver"
     ext.gcr_kbn = "gcr.io/$gc_project/kibana:$whole_ver"
+    ext.eck_url = "https://download.elastic.co/downloads/eck/1.3.0/all-in-one.yaml"
+
   }
 }
 
@@ -115,7 +117,7 @@ def downloadKubectl(dirname) {
   exec {
     workingDir dirname
     commandLine 'curl', '-LOs',
-      'https://storage.googleapis.com/kubernetes-release/release/v1.17.2/bin/linux/amd64/kubectl'
+      'https://storage.googleapis.com/kubernetes-release/release/v1.19.0/bin/linux/amd64/kubectl'
   }
   exec {
     workingDir dirname
@@ -168,11 +170,26 @@ task delete_container() {
  */
 
 // *********************************************************************************
-task install_eck() {
+task install_eck(type: Exec) {
   doFirst {
-    def out = runShell("./kubectl apply -f" +
-                       "https://download.elastic.co/downloads/eck/1.3.0/all-in-one.yaml",
-                       "$projectDir")
+    workingDir "$projectDir"
+    commandLine "bash", "-c", "kubectl apply -f ${getenv_var['eck_url']}"
+  }
+}
+
+// *********************************************************************************
+task uninstall_eck(type: Exec) {
+  doFirst {
+    workingDir "$projectDir"
+    commandLine "bash", "-c", "kubectl get namespaces --no-headers -o custom-columns=:metadata.name | xargs -n1 kubectl delete elastic --all -n"
+  }
+}
+
+// *********************************************************************************
+task uninstall_operator(type: Exec) {
+  doFirst {
+    workingDir "$projectDir"
+    commandLine "bash", "-c", "kubectl delete -f ${getenv_var['eck_url']}"
   }
 }
 
@@ -317,7 +334,8 @@ task get_credentials() {
 
     // Install the all-trusting host verifier
     HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-
+    // Sometimes the Kibana API status page is not ready, try waiting a bit before connecting
+    Thread.sleep(10000);
     def kbn_url = new URL(properties.kibana_url + "/api/status").openConnection();
     def es_url =  new URL(properties.elasticsearch_url).openConnection();
     String userpass = properties.es_username + ":" + properties.es_password;
@@ -543,4 +561,12 @@ task eck_run_kibana_tests(dependsOn: getenv_var) {
   }
 }
 
-eck_run_kibana_tests.finalizedBy delete_container
+task cleanup() {
+  doFirst {
+    uninstall_eck.execute()
+    uninstall_operator.execute()
+    delete_container.execute()
+  }
+}
+
+eck_run_kibana_tests.finalizedBy cleanup
