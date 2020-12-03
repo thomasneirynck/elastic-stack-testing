@@ -172,24 +172,21 @@ task delete_container() {
 // *********************************************************************************
 task install_eck(type: Exec) {
   doFirst {
-    workingDir "$projectDir"
-    commandLine "bash", "-c", "kubectl apply -f ${getenv_var['eck_url']}"
+    commandLine "bash", "-c", "$projectDir/kubectl apply -f ${getenv_var['eck_url']}"
   }
 }
 
 // *********************************************************************************
 task uninstall_eck(type: Exec) {
   doFirst {
-    workingDir "$projectDir"
-    commandLine "bash", "-c", "kubectl get namespaces --no-headers -o custom-columns=:metadata.name | xargs -n1 kubectl delete elastic --all -n"
+    commandLine "bash", "-c", "$projectDir/kubectl get namespaces --no-headers -o custom-columns=:metadata.name | xargs -n1 $projectDir/kubectl delete elastic --all -n"
   }
 }
 
 // *********************************************************************************
 task uninstall_operator(type: Exec) {
   doFirst {
-    workingDir "$projectDir"
-    commandLine "bash", "-c", "kubectl delete -f ${getenv_var['eck_url']}"
+    commandLine "bash", "-c", "$projectDir/kubectl delete -f ${getenv_var['eck_url']}"
   }
 }
 
@@ -561,12 +558,4 @@ task eck_run_kibana_tests(dependsOn: getenv_var) {
   }
 }
 
-task cleanup() {
-  doFirst {
-    uninstall_eck.execute()
-    uninstall_operator.execute()
-    delete_container.execute()
-  }
-}
-
-eck_run_kibana_tests.finalizedBy cleanup
+eck_run_kibana_tests.finalizedBy uninstall_eck, uninstall_operator, delete_container
