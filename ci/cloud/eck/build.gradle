@@ -23,6 +23,7 @@ import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
 
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.DumperOptions;
 
 plugins {
   id 'org.ajoberstar.grgit' version '4.0.2' apply false
@@ -170,7 +171,7 @@ task delete_container() {
 task install_eck() {
   doFirst {
     def out = runShell("./kubectl apply -f" +
-                       "https://download.elastic.co/downloads/eck/1.0.1/all-in-one.yaml",
+                       "https://download.elastic.co/downloads/eck/1.3.0/all-in-one.yaml",
                        "$projectDir")
   }
 }
@@ -183,17 +184,23 @@ task install_eck() {
 
 // *********************************************************************************
 def updateSpec(type, filename, image) {
-  Yaml yaml = new Yaml();
+  DumperOptions dump = new DumperOptions();
+  dump.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+  dump.setDefaultScalarStyle(DumperOptions.ScalarStyle.PLAIN);
+  dump.setPrettyFlow(true);
+  dump.setIndent(2);
+  dump.setCanonical(false);
+  Yaml yaml = new Yaml(dump);
   File file = new File(filename)
   Map map = yaml.load(file.newInputStream());
-  map["spec"]["version"] = "${getenv_var['cloud_ver']}"
-  map["spec"]["image"] =  image
+  map["spec"]["version"] = "${getenv_var['cloud_ver']}".toString()
+  map["spec"]["image"] =  image.toString()
   if ( type == "kibana") {
     def kbnSettingsUrl = "https://raw.githubusercontent.com/elastic/elastic-stack-testing/" +
                          "${getenv_var['kibana_ver']}" + "/ci/cloud/product/settings/kibana.yml"
     map["spec"]["config"] = new URL(kbnSettingsUrl).getText('UTF-8')
   }
-  file.write(yaml.dump(map))
+  file.write(yaml.dump(map).toString().replaceAll("config: \\|", "config:"))
 }
 
 /*
@@ -204,7 +211,7 @@ def updateSpec(type, filename, image) {
 
 // *********************************************************************************
 def waitForElasticsearch() {
-  long finish = System.currentTimeMillis() + 180000;
+  long finish = System.currentTimeMillis() + 300000;
   def isRunning = false
   while (System.currentTimeMillis() < finish) {
     def out = runShell('./kubectl get elasticsearch', "$projectDir")
@@ -340,7 +347,7 @@ task get_credentials() {
 
 // *********************************************************************************
 def waitForKibana() {
-  long finish = System.currentTimeMillis() + 180000;
+  long finish = System.currentTimeMillis() + 300000;
   def isRunning = false
   while (System.currentTimeMillis() < finish) {
     def out = runShell("./kubectl get kibana", "$projectDir")
