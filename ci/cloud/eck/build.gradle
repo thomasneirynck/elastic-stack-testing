@@ -559,3 +559,6 @@ task eck_run_kibana_tests(dependsOn: getenv_var) {
 }
 
 eck_run_kibana_tests.finalizedBy uninstall_eck, uninstall_operator, delete_container
+
+delete_container.mustRunAfter uninstall_eck, uninstall_operator
+uninstall_operator.mustRunAfter uninstall_eck
