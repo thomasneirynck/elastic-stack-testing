@@ -24,7 +24,7 @@ downloadResponse=$(curl -L -H "Authorization: token ${ghToken}" -H "Accept: appl
 cd ${libsDir}
 
 echo "Download java vault driver"
-wget "https://repo.maven.apache.org/maven2/com/bettercloud/vault-java-driver/5.1.0/vault-java-driver-5.1.0.jar"
+wget "https://repo.maven.apache.org/maven2/com/bettercloud/vault-java-driver/3.1.0/vault-java-driver-3.1.0.jar"
 
 echo "Download apache http client"
 wget "https://repo.maven.apache.org/maven2/org/apache/httpcomponents/httpclient/4.5.13/httpclient-4.5.13.jar"
