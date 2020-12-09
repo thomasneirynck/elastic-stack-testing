@@ -1,5 +1,4 @@
 home.disableWelcomeScreen: true
-logging.verbose: true
 server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 telemetry.banner: false
 vis_type_timelion.ui.enabled: true
