@@ -1,7 +1,7 @@
 {
-  "upgradeTest1": "5.6,5.6.16,6.8.13,7.10.1",
-  "upgradeTest2": "6.8,6.8.13,7.10.1",
-  "upgradeTest3": "7.8,7.8.1,7.10.1",
-  "upgradeTest4": "7.9,7.9.3,7.10.1",
-  "upgradeTest5": "7.10,7.10.1-SNAPSHOT,7.11.0-SNAPSHOT"
+  "upgradeTest1": "5.6,5.6.16,6.8.13,7.11.0",
+  "upgradeTest2": "6.8,6.8.13,7.11.0",
+  "upgradeTest3": "7.8,7.8.1,7.11.0",
+  "upgradeTest4": "7.9,7.9.3,7.11.0",
+  "upgradeTest5": "7.10,7.10.1,7.11.0"
 }
