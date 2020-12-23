@@ -2205,6 +2205,11 @@ function set_linux_package() {
     return
   fi
 
+  # TODO: need sudo enable on Jenkins
+    export ESTF_TEST_PACKAGE="tar.gz"
+    return
+  # -- remove once done 
+
   rpmSupported=$(which rpm &>/dev/null; echo $?)
   dpkgSupported=$(which dpkg &>/dev/null; echo $?)
 
