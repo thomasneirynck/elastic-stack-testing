@@ -445,7 +445,7 @@ task get_ecctl(dependsOn: create_ecctl_dir) {
 }
 
 // *********************************************************************************
-task ecctl_platform_upload() {
+task ecctl_stack_upload() {
   doFirst {
     println "In ${name}"
     def ver = "${getenv_var['cloud_ver']}"
@@ -453,13 +453,13 @@ task ecctl_platform_upload() {
       ver =  "${getenv_var['ver_whole']}"
     }
     def zipFile = "$buildDir/cloud-assets/${ver}.zip"
-    ShellCommand shell = new ShellCommand("./ecctl platform stack upload " + zipFile,
+    ShellCommand shell = new ShellCommand("./ecctl stack upload " + zipFile,
                                           "$buildDir/ecctl")
     shell.waitFor()
     def out = shell.getOutput()
     if (shell.getRc() != 0) {
       println out
-      throw new GradleException("ECCTL upload failed!")
+      throw new GradleException("ECCTL stack upload failed!")
     }
   }
 }
@@ -627,7 +627,7 @@ task ece_run_kibana_tests(type: GradleBuild) {
     println "In ${name}"
     tasks = ['getenv_var', 'install_ece', 'build_stackpack',
              'build_cloudimage_elasticsearch', 'build_cloudimage_kibana',
-             'get_ecctl', 'ecctl_platform_upload', 'ecctl_create_deployment',
+             'get_ecctl', 'ecctl_stack_upload', 'ecctl_create_deployment',
              'ecctl_disable_saml_login', ':common:run_kibana_tests']
 }
 
@@ -637,5 +637,5 @@ task ece_run_kibana_pr(type: GradleBuild) {
     tasks = ['getenv_var', 'install_ece', 'build_stackpack', 'get_ecctl',
              ':common:kibana_build_docker_image',
              'build_cloudimage_elasticsearch', 'build_cloudimage_kibana',
-             'ecctl_platform_upload', 'ecctl_create_deployment']
+             'ecctl_stack_upload', 'ecctl_create_deployment']
 }
