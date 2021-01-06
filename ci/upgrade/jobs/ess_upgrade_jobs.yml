@@ -1,0 +1,9 @@
+TASK:
+  - ess_upgrade
+JOB:
+  - upgradeTest1
+  - upgradeTest2
+  - upgradeTest3 
+  - upgradeTest4
+  - upgradeTest5
+exclude: ~

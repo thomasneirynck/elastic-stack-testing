@@ -247,7 +247,11 @@ python_install_packages() {
 java_install_packages() {
   check_python_virtual_env
   echo_info "Install java sdk package"
-  python ${AIT_SCRIPTS}/python/install_cloud_sdk.py
+  if [ ! -z $ESTF_UPGRADE_CLOUD_VERSION ] || ([ ! -z $TASK ] && [ $TASK == "ess_upgrade" ]); then
+     python ${AIT_SCRIPTS}/python/install_cloud_sdk_upgrades.py
+  else
+    python ${AIT_SCRIPTS}/python/install_cloud_sdk.py
+  fi
   RC=$?
   if [ $RC -ne 0 ]; then
     echo_error "FAILED! Java SDK not installed"
@@ -402,13 +406,16 @@ run_tests() {
 # ----------------------------------------------------------------------------
 run_cloud_tests() {
   if [ ! -z $ESTF_UPGRADE_CLOUD_VERSION ]; then
-    export TASK=saas_upgrade
+    export TASK=ess_upgrade
   fi
   if [ -z $TASK ]; then
     echo_error "Gradle task name must be supplied"
     exit 1
   fi
   cd ${AIT_CI_CLOUD_DIR}
+  if [ $TASK == "ess_upgrade" ]; then
+    cd ${AIT_CI_CLOUD_UPGRADE_DIR}
+  fi
   ./gradlew $TASK
   RC=$?
   if [ $RC -ne 0 ]; then

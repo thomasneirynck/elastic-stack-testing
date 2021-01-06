@@ -18,9 +18,9 @@ vault_client = hvac.Client(url=vault_addr, token=vault_token)
 if not vault_client.is_authenticated():
     raise IOError('Unable to authenticate to vault')
 creds = vault_client.read(vault_path)
-os.chdir(str(Path(__file__).resolve().parent.parent.parent) + '/ci/cloud')
+os.chdir(str(Path(__file__).resolve().parent.parent.parent) + '/ci/upgrade')
 print(os.getcwd())
-cmd = 'GH_OWNER=elastic GH_TOKEN=' + creds['data']['token'] + ' ./getJavaSdk.sh'
+cmd = 'GH_OWNER=elastic GH_TOKEN=' + creds['data']['token'] + ' ./downloadLibs.sh'
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
 (output, err) = p.communicate()
 p.wait()

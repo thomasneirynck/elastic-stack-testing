@@ -22,3 +22,4 @@ export AIT_VM_INSTALL_DIR=/home/vagrant
 export AIT_VM_WIN_INSTALL_DIR=c:/users/vagrant
 
 export AIT_CI_CLOUD_DIR=${AIT_ROOTDIR}/ci/cloud
+export AIT_CI_CLOUD_UPGRADE_DIR=${AIT_ROOTDIR}/ci/upgrade

@@ -1,0 +1,13 @@
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    api 'co.elastic.cloud:sdk-java:2.7.0-SNAPSHOT'
+    api 'com.bettercloud:vault-java-driver:5.1.0'
+    api 'org.apache.httpcomponents:httpcore:4.4.13'
+    api 'org.apache.httpcomponents:httpclient:4.5.13'
+    api 'org.json:json:20200518'
+}
