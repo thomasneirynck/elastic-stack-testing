@@ -22,7 +22,7 @@ function downloadCloudSdk() {
     local ghOwner="${GH_OWNER:?GH_OWNER needs to be set!}"
     local ghToken="${GH_TOKEN:?GH_TOKEN needs to be set!}"
     local sdkVersion="2.7.0-SNAPSHOT"
-    local releaseByTagUrl="https://api.github.com/repos/${ghOwner}/cloud-sdk-java/releases/tags/v${sdkVersion}"
+    local releaseByTagUrl="https://api.github.com/repos/${ghOwner}/cloud-sdk-java/releases/tags/${sdkVersion}"
     releaseByTagResponse=$(curl -H "Authorization: token ${ghToken}" -s ${releaseByTagUrl})
     if [ $? -ne 0 ]; then
         echo "Error! Unable to get release by tag url"
@@ -41,7 +41,7 @@ function downloadCloudSdk() {
         exit 1
     fi
     downloadResponse=$(curl -L -H "Authorization: token ${ghToken}" \
-                            -H "Accept: application/octet-stream" ${assetUrl} -o ${libsDir}/${assetName})
+                            -H "Accept: application/octet-stream" ${assetUrl} -o ${assetName})
     if [ $? -ne 0 ]; then
         echo "Error! Unable to download java sdk"
         exit 1
