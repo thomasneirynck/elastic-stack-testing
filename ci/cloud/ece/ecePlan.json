@@ -5,12 +5,13 @@
             {
                 "display_name": "ESTF Elasticsearch Cluster",
                 "ref_id": "estf-es-cluster",
+                "region": "ece-region",
                 "plan": {
                     "deployment_template": {
                         "id": "default"
                     },
                     "elasticsearch": {
-                        "version": "7.5.0"
+                        "version": ""
                     },
                     "cluster_topology": [
                         {
@@ -73,17 +74,20 @@
             {
                 "display_name": "ESTF Kibana Instance",
                 "ref_id": "estf-kibana-instance",
+                "region": "ece-region",
                 "elasticsearch_cluster_ref_id": "estf-es-cluster",
                 "plan": {
                     "kibana": {
-                        "version": "7.5.0",
+                        "version": "",
                         "user_settings_override_json": {}
                     },
                     "cluster_topology": [
                         {
                             "instance_configuration_id": "kibana",
-                            "memory_per_node": 1024,
-                            "node_count_per_zone": 1,
+                            "size": {
+                              "resource": "memory",
+                              "value": 2048
+                            },
                             "zone_count": 1
                         }
                     ]

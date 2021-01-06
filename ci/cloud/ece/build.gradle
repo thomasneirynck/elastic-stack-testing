@@ -477,9 +477,19 @@ task ecctl_create_deployment() {
     updatePlan("kibana", plan)
     def name = "ESTF__" + UUID.randomUUID().toString()
     def ip =  getIP()
+
+    File filep = new File(plan)
+
+    def slurped = new JsonSlurper().parseText(filep.getText('UTF-8'))
+    def builder = new JsonBuilder(slurped)
+
+    slurped.resources.kibana.get(0).plan.kibana.version = ver
+    slurped.resources.elasticsearch.get(0).plan.elasticsearch.version = ver
+
+    filep.write(builder.toPrettyString())
+
     ShellCommand shell = new ShellCommand("./ecctl deployment create -f " + plan +
                                           " --name " + name +
-                                          " --version " + "$ver" +
                                           " --track",
                                           "$buildDir/ecctl")
     shell.waitFor()
