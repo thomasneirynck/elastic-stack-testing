@@ -188,8 +188,8 @@ public class CreateEssDeployment extends DefaultTask {
         TopologySize topologySize = getTopologySize();
 
         ElasticsearchNodeType esNodeType = new ElasticsearchNodeType().data(true).master(true).ingest(false).ml(false);
-        ElasticsearchNodeType ingestNodeType = new ElasticsearchNodeType().data(false).master(false).ingest(true);
-        ElasticsearchNodeType mlNodeType = new ElasticsearchNodeType().data(false).master(false).ml(true);
+        ElasticsearchNodeType ingestNodeType = new ElasticsearchNodeType().data(false).master(false).ml(false).ingest(true);
+        ElasticsearchNodeType mlNodeType = new ElasticsearchNodeType().data(false).master(false).ingest(false).ml(true);
 
         ElasticsearchClusterTopologyElement esTopology = new ElasticsearchClusterTopologyElement()
                 .instanceConfigurationId(esInstanceCfg)
