@@ -1,0 +1,32 @@
+version: '2.2'
+
+services:
+  create_certs:
+    image: docker.elastic.co/elasticsearch/${DOCKER_ES_IMG_NAME}:${DOCKER_ES_IMG_TAG}
+    container_name: create_certs
+    user: root
+    command: >
+      bash -c '
+        yum install -y -q -e 0 unzip;
+        if [[ ! -f /certs/bundle.zip ]]; then
+          bin/elasticsearch-certutil ca --silent --pem --pass password -out /certs/bundle_ca.zip
+          unzip /certs/bundle_ca.zip -d /certs
+          bin/elasticsearch-certutil cert --ca-key /certs/ca/ca.key --ca-cert  /certs/ca/ca.crt --ca-pass password --pem --silent --in config/certificates/instances.yml -out /certs/bundle_certs.zip
+          unzip /certs/bundle_certs.zip -d /certs;
+        fi;
+        chown -R 1000:0 /certs
+      '
+    working_dir: /usr/share/elasticsearch
+    volumes:
+      - certs:/certs
+      - .:/usr/share/elasticsearch/config/certificates
+    networks:
+      - elastic
+
+volumes:
+  certs:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge
