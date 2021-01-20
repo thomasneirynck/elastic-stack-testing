@@ -1,7 +1,7 @@
 JOB:
-  - ossGrp1
-  - ossGrp2
-  - ossGrp3
+  - basicGrp1
+  - basicGrp2
+  - basicGrp3
   - xpackGrp1
   - xpackGrp2
   - xpackGrp3
