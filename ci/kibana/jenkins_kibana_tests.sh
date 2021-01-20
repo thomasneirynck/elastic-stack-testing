@@ -1738,7 +1738,7 @@ function docker_load {
 
   if [ "$type" == "basic" ]; then
     curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/basic/kibana.yml --output kibana.yml
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/basic/docker-compose.yml --output docker-compose.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/docker/basic/docker-compose.yml --output docker-compose.yml
 
     echo_info "Run docker compose up..."
     docker-compose up -d
@@ -1756,9 +1756,9 @@ function docker_load {
   else
 
     curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/kibana.yml --output kibana.yml
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/create-certs.yml --output create-certs.yml
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/elastic-docker-tls.yml --output elastic-docker-tls.yml
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/default/instances.yml --output instances.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/docker/default/create-certs.yml --output create-certs.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/docker/default/elastic-docker-tls.yml --output elastic-docker-tls.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/docker/default/instances.yml --output instances.yml
 
     export COMPOSE_PROJECT_NAME=es
     export CERTS_DIR=/usr/share/elasticsearch/config/certificates
@@ -1828,7 +1828,7 @@ function run_standalone_basic_tests() {
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
   update_test_files
- 
+
   export TEST_BROWSER_HEADLESS=1
 
   install_standalone_servers
@@ -2341,6 +2341,7 @@ function elasticsearch_generate_certs() {
   local _esHome="/etc/elasticsearch"
   local _kbnHome="/etc/kibana"
   local _ip=$(hostname -I | sed 's/ *$//g')
+  local _isNewCertUtils=$(vge $_version "8.0")
 
   echo_info "Generate Elasticsearch certificates"
 
@@ -2349,14 +2350,40 @@ function elasticsearch_generate_certs() {
   echo "    ip:" >> instances.yml
   echo "      - $_ip" >> instances.yml
 
-  sudo -s /usr/share/elasticsearch/bin/elasticsearch-certgen -in "$(pwd)/instances.yml" -out "$_esHome/certsbundle.zip"
-  if [ $? -ne 0 ]; then
-    echo_error_exit "elasticearch-certgen failed!"
-  fi
+   if [[ $_isNewCertUtils == 1 ]]; then
 
-  sudo unzip $_esHome/certsbundle.zip -d $_esHome
-  if [ $? -ne 0 ]; then
-    echo_error_exit "Extract certs bundle failed!"
+    sudo -s /usr/share/elasticsearch/bin/elasticsearch-certutil ca --silent --pem --pass password --out "$_esHome/cabundle.zip"
+    if [ $? -ne 0 ]; then
+      echo_error_exit "elasticearch-certgen ca failed!"
+    fi
+
+    sudo unzip $_esHome/cabundle.zip -d $_esHome
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Extract ca bundle failed!"
+    fi
+
+    sudo -s /usr/share/elasticsearch/bin/elasticsearch-certutil cert --silent --pem --ca-key "$_esHome/ca/ca.key" --ca-cert  "$_esHome/ca/ca.crt" --ca-pass password --in "$(pwd)/instances.yml" --out "$_esHome/certsbundle.zip"
+    if [ $? -ne 0 ]; then
+      echo_error_exit "elasticearch-certgen failed!"
+    fi
+
+    sudo unzip $_esHome/certsbundle.zip -d $_esHome
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Extract certs bundle failed!"
+    fi
+
+  else
+
+    sudo -s /usr/share/elasticsearch/bin/elasticsearch-certutil cert --silent --pem  --in "$(pwd)/instances.yml" --out "$_esHome/certsbundle.zip"
+    if [ $? -ne 0 ]; then
+      echo_error_exit "elasticearch-certgen failed!"
+    fi
+
+    sudo unzip $_esHome/certsbundle.zip -d $_esHome
+    if [ $? -ne 0 ]; then
+      echo_error_exit "Extract certs bundle failed!"
+    fi
+
   fi
 
   sudo cp -r $_esHome/escluster $_esHome/ca $_kbnHome
