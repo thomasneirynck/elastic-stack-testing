@@ -1,4 +1,4 @@
-ossGrp1="bundles
+basicGrp1="bundles
          console
          context
          discover
@@ -10,10 +10,10 @@ ossGrp1="bundles
          timelion
         "
 
-ossGrp2="visualize
+basicGrp2="visualize
         "
 
-ossGrp3="dashboard
+basicGrp3="dashboard
         "
 
 xpackGrp1="advanced_settings

@@ -6,7 +6,7 @@
 #  - Download and install kibana archive: .zip or .tar.gz
 #  - Download and install node and yarn
 #  - Kibana bootstrap
-#  - Run Kibana tests: unit, selenium and xpack
+#  - Run Kibana tests: unit, basic functional, default functional
 #  - Logging functions
 #
 # Author: Liza Dayoub
@@ -323,8 +323,8 @@ function get_kibana_pkg() {
   local _isUbiSupported=$(vge $_version "7.10")
 
   # Package type
-  local _pkgType="${TEST_KIBANA_BUILD:-"oss"}"
-  if ! [[ "$_pkgType" =~ ^(oss|default|ubi8)$ ]]; then
+  local _pkgType="${TEST_KIBANA_BUILD:-"basic"}"
+  if ! [[ "$_pkgType" =~ ^(oss|basic|default|ubi8)$ ]]; then
     echo_error_exit "Unknown build type: $_pkgType"
   fi
   if [[ "$_pkgType" == "oss" && $_isOssSupported == 1 ]]; then
@@ -757,7 +757,7 @@ function set_percy_target_branch() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to copy oss visual tests into Kibana repo
+# Method to copy basic visual tests into Kibana repo
 # -----------------------------------------------------------------------------
 function cp_visual_tests() {
   # Get files
@@ -850,7 +850,7 @@ function _check_array_vals_eq() {
     elif awk 'v && $1!=v{ exit 1 }{ v=$1 }' <(printf "%s\n" "${arr[@]}"); then
       echo_info "Test Suite Group: ${arr[0]}"
     else
-      echo_error_exit "ESTF_FLAKY_TEST_SUITE can not have mixed values: oss, xpack, xpackExt"
+      echo_error_exit "ESTF_FLAKY_TEST_SUITE can not have mixed values: basic, xpack, xpackExt"
     fi
 }
 
@@ -865,8 +865,8 @@ function check_test_suite() {
   do
     testSuiteRoot=${item%%/*}
     if [[ "$testSuiteRoot" == "test" ]] ||
-       [[ "$testSuiteRoot" == *"ossGrp"* ]]; then
-      types+=( "oss" )
+       [[ "$testSuiteRoot" == *"basicGrp"* ]]; then
+      types+=( "basic" )
     elif [[ "$testSuiteRoot" == "x-pack" ]]; then
       if [[ "$item" != *"/functional/"* ]]; then
         types+=( "xpackExt" )
@@ -1068,11 +1068,11 @@ function flaky_test_runner() {
   echo_debug "ESTF_FLAKY_TEST_SUITE: $ESTF_FLAKY_TEST_SUITE"
 
   case "$ESTF_TEST_GROUP" in
-    oss|test)
+    basic|test)
       if [ $PLATFORM == "cloud" ]; then
-        run_cloud_oss_tests
+        run_cloud_basic_tests
       else
-        run_oss_tests
+        run_basic_tests
       fi
       ;;
     xpack|x-pack)
@@ -1089,11 +1089,11 @@ function flaky_test_runner() {
         run_xpack_ext_tests
       fi
       ;;
-    ossGrp*)
+    basicGrp*)
       if [ $PLATFORM == "cloud" ]; then
-        run_cloud_oss_tests $ESTF_TEST_GROUP
+        run_cloud_basic_tests $ESTF_TEST_GROUP
       else
-        run_oss_tests $ESTF_TEST_GROUP
+        run_basic_tests $ESTF_TEST_GROUP
       fi
       ;;
     xpackGrp*)
@@ -1192,10 +1192,10 @@ function run_xpack_unit_tests() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory
+# Method to run basic tests from Kibana repo, ones in test/ directory
 # -----------------------------------------------------------------------------
-function run_oss_tests() {
-  echo_info "In run_oss_tests"
+function run_basic_tests() {
+  echo_info "In run_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
@@ -1203,8 +1203,9 @@ function run_oss_tests() {
 
   includeTags=$(update_config "test/functional/config.js" $testGrp)
   update_test_files
+  remove_oss
 
-  TEST_KIBANA_BUILD=oss
+  TEST_KIBANA_BUILD=basic
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
@@ -1218,7 +1219,7 @@ function run_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running oss functional tests, run $i of $maxRuns"
+    echo_info " -> Running basic functional tests, run $i of $maxRuns"
     eval node scripts/functional_tests \
           --esFrom snapshot \
           --kibana-install-dir=${Glb_Kibana_Dir} \
@@ -1232,7 +1233,7 @@ function run_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "OSS Test failed!"
+  exit_script $failures "basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1355,10 +1356,10 @@ function run_xpack_ext_tests() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory for cloud platform
+# Method to run basic tests from Kibana repo, ones in test/ directory for cloud platform
 # -----------------------------------------------------------------------------
-function run_cloud_oss_tests() {
-  echo_info "In run_cloud_oss_tests"
+function run_cloud_basic_tests() {
+  echo_info "In run_cloud_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
@@ -1375,8 +1376,8 @@ function run_cloud_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running cloud oss functional tests, run $i of $maxRuns"
-    eval node scripts/functional_test_runner \
+    echo_info " -> Running cloud basic functional tests, run $i of $maxRuns"
+    eval node $nodeOpts scripts/functional_test_runner \
           --config test/functional/config.js \
           --exclude-tag skipCloud \
           --debug " $includeTags"
@@ -1387,7 +1388,7 @@ function run_cloud_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "Cloud OSS Test failed!"
+  exit_script $failures "Cloud basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1543,18 +1544,19 @@ function run_cloud_xpack_ext_tests() {
 # -----------------------------------------------------------------------------
 # Method to run visual tests under Kibana repo tests/
 # -----------------------------------------------------------------------------
-function run_visual_tests_oss() {
+function run_visual_tests_basic() {
   check_percy_pkg
   run_ci_setup
   set_percy_target_branch
 
-  TEST_KIBANA_BUILD=oss
+  remove_oss
+  TEST_KIBANA_BUILD=basic
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
   export LOG_LEVEL=debug
 
-  echo_info "Running oss visual tests"
+  echo_info "Running basic visual tests"
   yarn run percy exec -- -t 700 -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
@@ -1657,7 +1659,7 @@ function wait_for_kbn_ready {
 # Method docker load
 # -----------------------------------------------------------------------------
 function docker_load {
-  local type=${1:-oss}
+  local type=${TEST_KIBANA_BUILD:-basic}
 
   get_build_server
   get_version
@@ -1681,9 +1683,9 @@ function docker_load {
     echo_error_exit "Failed to load kibana docker"
   fi
 
-  if [ "$type" == "oss" ]; then
-    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/oss/kibana.yml --output kibana.yml
-    curl https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/oss/docker-compose.yml --output docker-compose.yml
+  if [ "$type" == "basic" ]; then
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/basic/kibana.yml --output kibana.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/basic/docker-compose.yml --output docker-compose.yml
 
     echo_info "Run docker compose up..."
     docker-compose up -d
@@ -1761,15 +1763,14 @@ function docker_load {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory for docker
+# Method to run basic tests from Kibana repo, ones in test/ directory for docker
 # -----------------------------------------------------------------------------
-function run_docker_oss_tests() {
-  echo_info "In run_docker_oss_tests"
+function run_standalone_basic_tests() {
+  echo_info "In run_standalone_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
-  TEST_KIBANA_BUILD=oss
-  TEST_KIBANA_DOCKER=true
+  TEST_KIBANA_BUILD=basic
 
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
@@ -1784,7 +1785,7 @@ function run_docker_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running docker oss functional tests, run $i of $maxRuns"
+    echo_info " -> Running standalone basic functional tests, run $i of $maxRuns"
     eval node scripts/functional_test_runner \
           --config test/functional/config.js \
           --debug " $includeTags"
@@ -1795,7 +1796,7 @@ function run_docker_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "Docker OSS Test failed!"
+  exit_script $failures "Standalone basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1902,6 +1903,15 @@ function run_docker_xpack_ext_tests() {
 # *****************************************************************************
 
 # -----------------------------------------------------------------------------
+# Method to use basic license instead of oss
+# -----------------------------------------------------------------------------
+function remove_oss() {
+  sed -i "s/license: 'oss'/license: 'basic'/g" test/common/config.js
+  sed -i '/--oss/d' test/new_visualize_flow/config.ts
+  sed -i '/--oss/d' test/functional/config.js
+}
+
+# -----------------------------------------------------------------------------
 # Method to update config file with files to be included
 # -----------------------------------------------------------------------------
 function update_config_file() {
@@ -2003,7 +2013,7 @@ function update_test_files() {
 
 # -----------------------------------------------------------------------------
 # Method to get tag substring, must be after group name, start with Tag til end
-# ex: ossGrp1TagSomething
+# ex: basicGrp1TagSomething
 # -----------------------------------------------------------------------------
 function parse_str() {
   local testGrp=$1
@@ -2062,6 +2072,402 @@ function random_docker_image() {
 
   rand=$[ $RANDOM % 2 ]
   echo ${arr[$rand]}
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_es_ready_logs() {
+  while true; do
+    sudo tail /var/log/elasticsearch/elasticsearch.log | grep -E -i -w '(to \[GREEN\].*elasticsearch)|(Node.*started)'
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for elasticsearch server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_es_ready_logs() {
+  local timeout=${1:-40}
+  run_with_timeout _wait_for_es_ready_logs $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Elasticsearch server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function _wait_for_kbn_ready_logs() {
+  sleep 15;
+  while true; do
+    sudo tail -n 30 /var/log/kibana/kibana.log | grep -E -i -w 'kibana.*Server running at'
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    sleep 5;
+  done
+}
+
+# -----------------------------------------------------------------------------
+# Method wait for kibana server to be ready
+# -----------------------------------------------------------------------------
+function wait_for_kbn_ready_logs() {
+  local timeout=${1:-90}
+  run_with_timeout _wait_for_kbn_ready_logs $timeout
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Kibana server not ready"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# Random package testing
+# -----------------------------------------------------------------------------
+function set_linux_package() {
+  local _platform=$1
+  local _grp=$2
+
+  if [[ "$_platform" == "docker" ]]; then
+    export ESTF_TEST_PACKAGE="docker"
+    return
+  elif [[ "$_platform" != "linux" ]]; then
+    return
+  fi
+
+  get_build_server
+  get_version
+  get_os
+
+  local _splitStr=(${Glb_Kibana_Version//./ })
+  local _version=${_splitStr[0]}.${_splitStr[1]}
+  local _isPkgSupported=$(vge $_version "7.11")
+
+  if [[ $_isPkgSupported == 0 ]] || [[ "$Glb_Arch" == "aarch64" ]]; then
+    export ESTF_TEST_PACKAGE="tar.gz"
+    return
+  fi
+
+  if [ $_grp == "basicGrp1" ] ||  [ $_grp == "xpackGrp1" ]; then
+    export ESTF_TEST_PACKAGE="tar.gz"
+    return
+  fi
+
+  # TODO: need sudo enable on Jenkins
+    export ESTF_TEST_PACKAGE="tar.gz"
+    return
+  # -- remove once done
+
+  rpmSupported=$(which rpm &>/dev/null; echo $?)
+  dpkgSupported=$(which dpkg &>/dev/null; echo $?)
+
+  if [ $rpmSupported -eq 0 ]; then
+    export ESTF_TEST_PACKAGE="rpm"
+  elif [ $dpkgSupported -eq 0 ]; then
+    export ESTF_TEST_PACKAGE="deb"
+  else
+    export ESTF_TEST_PACKAGE="tar.gz"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# add_gpg_key
+# -----------------------------------------------------------------------------
+function add_gpg_key() {
+  echo_info "Add GPG Key"
+  if [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
+    sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  else
+    wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Add GPG key failed!"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# download_elasticsearch_pkg
+# -----------------------------------------------------------------------------
+function download_elasticsearch_pkg() {
+  local _esPkgName="$Glb_Install_Dir/${Glb_Es_Url##*/}"
+  local _kbnPkgName="$Glb_Install_Dir/${Glb_Kibana_Url##*/}"
+
+  echo_info "Download Elasticsearch: $Glb_Es_Url"
+  curl --silent -o $_esPkgName $Glb_Es_Url
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Download Elasticsearch failed"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# install_elasticsearch_pkg
+# -----------------------------------------------------------------------------
+function install_elasticsearch_pkg() {
+  echo_info "Install elasticsearch dir: $Glb_Install_Dir"
+  local _esPkgName="$Glb_Install_Dir/${Glb_Es_Url##*/}"
+  local _kbnPkgName="$Glb_Install_Dir/${Glb_Kibana_Url##*/}"
+
+  echo_info "Install Elasticsearch Package: $_esPkgName"
+  if [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
+    sudo rpm --install $_esPkgName
+  else
+    sudo dpkg -i $_esPkgName
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Install Elasticsearch failed"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# download_kibana_pkg
+# -----------------------------------------------------------------------------
+function download_kibana_pkg() {
+  local _esPkgName="$Glb_Install_Dir/${Glb_Es_Url##*/}"
+  local _kbnPkgName="$Glb_Install_Dir/${Glb_Kibana_Url##*/}"
+
+  echo_info "Download Kibana: $Glb_Kibana_Url"
+  curl --silent -o $_kbnPkgName $Glb_Kibana_Url
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Download Kibana failed"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# install_kibana_pkg
+# -----------------------------------------------------------------------------
+function install_kibana_pkg() {
+  echo_info "Install kibana dir: $Glb_Install_Dir"
+  local _esPkgName="$Glb_Install_Dir/${Glb_Es_Url##*/}"
+  local _kbnPkgName="$Glb_Install_Dir/${Glb_Kibana_Url##*/}"
+
+  echo_info "Install Kibana Package: $_kbnPkgName"
+  if [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
+    sudo rpm --install $_kbnPkgName
+  else
+    sudo dpkg -i $_kbnPkgName
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Install Kibana failed"
+  fi
+}
+
+# -----------------------------------------------------------------------------
+# update_kibana_settings
+# -----------------------------------------------------------------------------
+function update_kibana_settings() {
+  local type=${TEST_KIBANA_BUILD:-basic}
+
+  echo_info "Update Kibana settings"
+  if [ "$type" == "basic" ]; then
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/basic/kibana.yml --output kibana.yml
+  else
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/kibana.yml --output kibana.yml
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Download Kibana settings failed"
+  fi
+
+  cat kibana.yml | sudo -s tee -a /etc/kibana/kibana.yml
+
+}
+
+# -----------------------------------------------------------------------------
+# elasticsearch_generate_certs
+# -----------------------------------------------------------------------------
+function elasticsearch_generate_certs() {
+  local _esHome="/etc/elasticsearch"
+  local _kbnHome="/etc/kibana"
+  local _ip=$(hostname -I | sed 's/ *$//g')
+
+  echo_info "Generate Elasticsearch certificates"
+
+  echo "instances:" > instances.yml
+  echo "  - name: escluster" >> instances.yml
+  echo "    ip:" >> instances.yml
+  echo "      - $_ip" >> instances.yml
+
+  sudo -s /usr/share/elasticsearch/bin/elasticsearch-certgen -in "$(pwd)/instances.yml" -out "$_esHome/certsbundle.zip"
+  if [ $? -ne 0 ]; then
+    echo_error_exit "elasticearch-certgen failed!"
+  fi
+
+  sudo unzip $_esHome/certsbundle.zip -d $_esHome
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Extract certs bundle failed!"
+  fi
+
+  sudo cp -r $_esHome/escluster $_esHome/ca $_kbnHome
+
+
+sudo -s tee -a /etc/elasticsearch/elasticsearch.yml <<- EOM
+network.host: $_ip
+discovery.type: single-node
+xpack.security.enabled: true
+xpack.license.self_generated.type: trial
+xpack.security.http.ssl.enabled: true
+xpack.security.authc.token.enabled: false
+xpack.security.http.ssl.key: $_esHome/escluster/escluster.key
+xpack.security.http.ssl.certificate: $_esHome/escluster/escluster.crt
+xpack.security.http.ssl.certificate_authorities: [ '$_esHome/ca/ca.crt' ]
+EOM
+
+}
+
+# -----------------------------------------------------------------------------
+# elasticsearch_setup_passwords
+# -----------------------------------------------------------------------------
+function elasticsearch_setup_passwords() {
+  local _kbnHome="/etc/kibana"
+  local _ip=$(hostname -I | sed 's/ *$//g')
+
+  echo_info "Setup passwords"
+  echo "y" | sudo -s /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto  | tee passwords.txt
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Elastisearch setup passwords failed!"
+  fi
+
+  espw=$(cat passwords.txt | grep "PASSWORD elastic = " | awk '{print $4}')
+  kbnpw=$(cat passwords.txt | grep "PASSWORD kibana = " | awk '{print $4}')
+
+sudo -s tee -a /etc/kibana/kibana.yml <<- EOM
+server.host: $_ip
+elasticsearch.hosts: "https://${_ip##*( )}:9200"
+elasticsearch.username: kibana
+elasticsearch.password: $kbnpw
+server.ssl.enabled: true
+server.ssl.certificate: $_kbnHome/escluster/escluster.crt
+server.ssl.key: $_kbnHome/escluster/escluster.key
+elasticsearch.ssl.certificateAuthorities: [ '$_kbnHome/ca/ca.crt' ]
+elasticsearch.ssl.verificationMode: none
+EOM
+
+  export TEST_KIBANA_HOSTNAME=$_ip
+  export TEST_KIBANA_PROTOCOL=https
+  export TEST_KIBANA_PORT=5601
+  export TEST_KIBANA_USER=elastic
+  export TEST_KIBANA_PASS=$espw
+
+  export TEST_ES_HOSTNAME=$_ip
+  export TEST_ES_PROTOCOL=https
+  export TEST_ES_PORT=9200
+  export TEST_ES_USER=elastic
+  export TEST_ES_PASS=$espw
+
+  export NODE_TLS_REJECT_UNAUTHORIZED=0
+  export TEST_IGNORE_CERT_ERRORS=1
+
+}
+
+# -----------------------------------------------------------------------------
+# start_elasticsearch_service
+# -----------------------------------------------------------------------------
+function start_elasticsearch_service() {
+  local syssvc=$(ps -p 1)
+
+  echo_info "Start Elasticsearch service"
+  if [[ "$syssvc" = *"systemd"* ]]; then
+    sudo /bin/systemctl daemon-reload
+    sudo /bin/systemctl enable elasticsearch.service
+    sudo /bin/systemctl start elasticsearch.service
+  else
+    sudo -i service elasticsearch start
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Starting elasticsearch service failed"
+  fi
+  echo_info "Wait for elasticsearch to be ready"
+  wait_for_es_ready_logs
+}
+
+# -----------------------------------------------------------------------------
+# start_kibana_service
+# -----------------------------------------------------------------------------
+function start_kibana_service() {
+  local syssvc=$(ps -p 1)
+
+  echo_info "Start Kibana service"
+  if [[ "$syssvc" = *"systemd"* ]]; then
+    sudo /bin/systemctl daemon-reload
+    sudo /bin/systemctl enable kibana.service
+    sudo /bin/systemctl start kibana.service
+  else
+    sudo -i service kibana start
+  fi
+  if [ $? -ne 0 ]; then
+    echo_error_exit "Starting kibana service failed"
+  fi
+  echo_info "Wait for kibana to be ready"
+  wait_for_kbn_ready_logs
+}
+
+# -----------------------------------------------------------------------------
+# Install debian packages for elasticsearch and kibana
+# -----------------------------------------------------------------------------
+function install_packages() {
+  local type=${TEST_KIBANA_BUILD:-basic}
+
+  if [ "$ESTF_TEST_PACKAGE" != "rpm" ] && [ "$ESTF_TEST_PACKAGE" != "deb" ]; then
+    echo_error_exit "Invalid pkg: $ESTF_TEST_PACKAGE"
+  fi
+
+  create_install_dir
+  get_build_server
+  get_version
+  get_os
+  get_branch
+  get_kibana_pkg
+  get_kibana_url
+  set_java_home
+
+  add_gpg_key
+
+  download_elasticsearch_pkg
+  install_elasticsearch_pkg
+
+  download_kibana_pkg
+  install_kibana_pkg
+
+  if [ "$type" != "basic" ]; then
+    elasticsearch_generate_certs
+  fi
+
+  start_elasticsearch_service
+
+  if [ "$type" != "basic" ]; then
+    elasticsearch_setup_passwords
+  fi
+
+  update_kibana_settings
+
+  start_kibana_service
+
+  if [ "$type" == "basic" ]; then
+    export TEST_KIBANA_PROTOCOL=http
+    export TEST_KIBANA_PORT=5601
+    export TEST_ES_PROTOCOL=http
+    export TEST_ES_PORT=9200
+  fi
+
+}
+
+# ----------------------------------------------------------------------------
+# Install standalone servers
+# ----------------------------------------------------------------------------
+function install_standalone_servers() {
+  local type=${TEST_KIBANA_BUILD:-basic}
+
+  if [ "$ESTF_TEST_PACKAGE" = "docker" ]; then
+    if [ "$type" != "basic" ]; then
+      TEST_KIBANA_BUILD=$(random_docker_image)
+    fi
+    docker_load
+  elif [ "$ESTF_TEST_PACKAGE" = "deb" ] || [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
+    install_packages
+  else
+    echo_error_exit "Invalid ESTF_TEST_PACKAGE: $ESTF_TEST_PACKAGE"
+  fi
 }
 
 # ****************************************************************************
@@ -2131,13 +2537,13 @@ case "$TEST_GROUP" in
     fi
     run_unit_tests
     ;;
-  ossGrp*)
+  basicGrp*)
     if [ $PLATFORM == "cloud" ]; then
-      run_cloud_oss_tests $TEST_GROUP
-    elif [ $PLATFORM == "docker" ]; then
-      run_docker_oss_tests $TEST_GROUP
+      run_cloud_basic_tests $TEST_GROUP
+    elif [ ! -z  $ESTF_TEST_PACKAGE ] && [ $ESTF_TEST_PACKAGE != "tar.gz" ]; then
+      run_standalone_basic_tests $TEST_GROUP
     else
-      run_oss_tests $TEST_GROUP
+      run_basic_tests $TEST_GROUP
     fi
     ;;
   xpackIntake)
@@ -2165,7 +2571,7 @@ case "$TEST_GROUP" in
     fi
     ;;
   selenium)
-    run_oss_tests
+    run_basic_tests
     ;;
   xpack)
     run_xpack_ext_tests true
@@ -2174,13 +2580,13 @@ case "$TEST_GROUP" in
     run_unit_tests
     ;;
   cloud_selenium)
-    run_cloud_oss_tests
+    run_cloud_basic_tests
     ;;
   cloud_xpack)
     run_cloud_xpack_ext_tests true
     ;;
-  visual_tests_oss)
-    run_visual_tests_oss
+  visual_tests_basic)
+    run_visual_tests_basic
     ;;
   visual_tests_default)
     run_visual_tests_default
