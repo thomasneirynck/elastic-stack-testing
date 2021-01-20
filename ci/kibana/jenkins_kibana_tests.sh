@@ -7,7 +7,7 @@
 #    .zip, .tar.gz, deb, rpm, docker and environments on-prem, cloud or visual
 #  - Download/install node and yarn based on kibana supported version
 #  - Kibana bootstrap
-#  - Run Kibana tests: unit, oss functional, default functional
+#  - Run Kibana tests: unit, basic functional, default functional
 #  - Logging functions
 #
 # Author: Liza Dayoub
@@ -324,8 +324,8 @@ function get_kibana_pkg() {
   local _isUbiSupported=$(vge $_version "7.10")
 
   # Package type
-  local _pkgType="${TEST_KIBANA_BUILD:-"oss"}"
-  if ! [[ "$_pkgType" =~ ^(oss|default|ubi8)$ ]]; then
+  local _pkgType="${TEST_KIBANA_BUILD:-"basic"}"
+  if ! [[ "$_pkgType" =~ ^(oss|basic|default|ubi8)$ ]]; then
     echo_error_exit "Unknown build type: $_pkgType"
   fi
   if [[ "$_pkgType" == "oss" && $_isOssSupported == 1 ]]; then
@@ -790,7 +790,7 @@ function set_percy_target_branch() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to copy oss visual tests into Kibana repo
+# Method to copy basic visual tests into Kibana repo
 # -----------------------------------------------------------------------------
 function cp_visual_tests() {
   # Get files
@@ -883,7 +883,7 @@ function _check_array_vals_eq() {
     elif awk 'v && $1!=v{ exit 1 }{ v=$1 }' <(printf "%s\n" "${arr[@]}"); then
       echo_info "Test Suite Group: ${arr[0]}"
     else
-      echo_error_exit "ESTF_FLAKY_TEST_SUITE can not have mixed values: oss, xpack, xpackExt"
+      echo_error_exit "ESTF_FLAKY_TEST_SUITE can not have mixed values: basic, xpack, xpackExt"
     fi
 }
 
@@ -898,8 +898,8 @@ function check_test_suite() {
   do
     testSuiteRoot=${item%%/*}
     if [[ "$testSuiteRoot" == "test" ]] ||
-       [[ "$testSuiteRoot" == *"ossGrp"* ]]; then
-      types+=( "oss" )
+       [[ "$testSuiteRoot" == *"basicGrp"* ]]; then
+      types+=( "basic" )
     elif [[ "$testSuiteRoot" == "x-pack" ]]; then
       if [[ "$item" != *"/functional/"* ]]; then
         types+=( "xpackExt" )
@@ -1101,11 +1101,11 @@ function flaky_test_runner() {
   echo_debug "ESTF_FLAKY_TEST_SUITE: $ESTF_FLAKY_TEST_SUITE"
 
   case "$ESTF_TEST_GROUP" in
-    oss|test)
+    basic|test)
       if [ $PLATFORM == "cloud" ]; then
-        run_cloud_oss_tests
+        run_cloud_basic_tests
       else
-        run_oss_tests
+        run_basic_tests
       fi
       ;;
     xpack|x-pack)
@@ -1122,11 +1122,11 @@ function flaky_test_runner() {
         run_xpack_ext_tests
       fi
       ;;
-    ossGrp*)
+    basicGrp*)
       if [ $PLATFORM == "cloud" ]; then
-        run_cloud_oss_tests $ESTF_TEST_GROUP
+        run_cloud_basic_tests $ESTF_TEST_GROUP
       else
-        run_oss_tests $ESTF_TEST_GROUP
+        run_basic_tests $ESTF_TEST_GROUP
       fi
       ;;
     xpackGrp*)
@@ -1225,10 +1225,10 @@ function run_xpack_unit_tests() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory
+# Method to run basic tests from Kibana repo, ones in test/ directory
 # -----------------------------------------------------------------------------
-function run_oss_tests() {
-  echo_info "In run_oss_tests"
+function run_basic_tests() {
+  echo_info "In run_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
@@ -1236,8 +1236,9 @@ function run_oss_tests() {
 
   includeTags=$(update_config "test/functional/config.js" $testGrp)
   update_test_files
+  remove_oss
 
-  TEST_KIBANA_BUILD=oss
+  TEST_KIBANA_BUILD=basic
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
@@ -1251,7 +1252,7 @@ function run_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running oss functional tests, run $i of $maxRuns"
+    echo_info " -> Running basic functional tests, run $i of $maxRuns"
     eval node scripts/functional_tests \
           --esFrom snapshot \
           --kibana-install-dir=${Glb_Kibana_Dir} \
@@ -1265,7 +1266,7 @@ function run_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "OSS Test failed!"
+  exit_script $failures "basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1388,10 +1389,10 @@ function run_xpack_ext_tests() {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory for cloud platform
+# Method to run basic tests from Kibana repo, ones in test/ directory for cloud platform
 # -----------------------------------------------------------------------------
-function run_cloud_oss_tests() {
-  echo_info "In run_cloud_oss_tests"
+function run_cloud_basic_tests() {
+  echo_info "In run_cloud_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
   local runWithSuperUser="${ESTF_RUN_SUPERUSER:-no}"
@@ -1418,7 +1419,7 @@ function run_cloud_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running cloud oss functional tests, run $i of $maxRuns"
+    echo_info " -> Running cloud basic functional tests, run $i of $maxRuns"
     eval node $nodeOpts scripts/functional_test_runner \
           --config test/functional/config.js \
           --exclude-tag skipCloud \
@@ -1430,7 +1431,7 @@ function run_cloud_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "Cloud OSS Test failed!"
+  exit_script $failures "Cloud basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1596,18 +1597,19 @@ function run_cloud_xpack_ext_tests() {
 # -----------------------------------------------------------------------------
 # Method to run visual tests under Kibana repo tests/
 # -----------------------------------------------------------------------------
-function run_visual_tests_oss() {
+function run_visual_tests_basic() {
   check_percy_pkg
   run_ci_setup
   set_percy_target_branch
 
-  TEST_KIBANA_BUILD=oss
+  remove_oss
+  TEST_KIBANA_BUILD=basic
   install_kibana
 
   export TEST_BROWSER_HEADLESS=1
   export LOG_LEVEL=debug
 
-  echo_info "Running oss visual tests"
+  echo_info "Running basic visual tests"
   yarn run percy exec -- -t 700 -- \
   node scripts/functional_tests \
     --kibana-install-dir=${Glb_Kibana_Dir} \
@@ -1710,7 +1712,7 @@ function wait_for_kbn_ready_docker {
 # Method docker load
 # -----------------------------------------------------------------------------
 function docker_load {
-  local type=${TEST_KIBANA_BUILD:-oss}
+  local type=${TEST_KIBANA_BUILD:-basic}
 
   get_build_server
   get_version
@@ -1734,9 +1736,9 @@ function docker_load {
     echo_error_exit "Failed to load kibana docker"
   fi
 
-  if [ "$type" == "oss" ]; then
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/oss/kibana.yml --output kibana.yml
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/oss/docker-compose.yml --output docker-compose.yml
+  if [ "$type" == "basic" ]; then
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/basic/kibana.yml --output kibana.yml
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/master/ci/kibana/docker/basic/docker-compose.yml --output docker-compose.yml
 
     echo_info "Run docker compose up..."
     docker-compose up -d
@@ -1814,19 +1816,19 @@ function docker_load {
 }
 
 # -----------------------------------------------------------------------------
-# Method to run oss tests from Kibana repo, ones in test/ directory for docker
+# Method to run basic tests from Kibana repo, ones in test/ directory for docker
 # -----------------------------------------------------------------------------
-function run_standalone_oss_tests() {
-  echo_info "In run_standalone_oss_tests"
+function run_standalone_basic_tests() {
+  echo_info "In run_standalone_basic_tests"
   local testGrp=$1
   local maxRuns="${ESTF_NUMBER_EXECUTIONS:-1}"
 
-  TEST_KIBANA_BUILD=oss
+  TEST_KIBANA_BUILD=basic
 
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
   update_test_files
-
+ 
   export TEST_BROWSER_HEADLESS=1
 
   install_standalone_servers
@@ -1836,7 +1838,7 @@ function run_standalone_oss_tests() {
     export ESTF_RUN_NUMBER=$i
     update_report_name "test/functional/config.js"
 
-    echo_info " -> Running standalone oss functional tests, run $i of $maxRuns"
+    echo_info " -> Running standalone basic functional tests, run $i of $maxRuns"
     eval node scripts/functional_test_runner \
           --config test/functional/config.js \
           --debug " $includeTags"
@@ -1847,7 +1849,7 @@ function run_standalone_oss_tests() {
 
   run_ci_cleanup
 
-  exit_script $failures "Standalone OSS Test failed!"
+  exit_script $failures "Standalone basic Test failed!"
 }
 
 # -----------------------------------------------------------------------------
@@ -1962,6 +1964,15 @@ function run_standalone_xpack_ext_tests() {
 # *****************************************************************************
 
 # -----------------------------------------------------------------------------
+# Method to use basic license instead of oss
+# -----------------------------------------------------------------------------
+function remove_oss() {
+  sed -i "s/license: 'oss'/license: 'basic'/g" test/common/config.js
+  sed -i '/--oss/d' test/new_visualize_flow/config.ts
+  sed -i '/--oss/d' test/functional/config.js
+}
+
+# -----------------------------------------------------------------------------
 # Method to update config file with files to be included
 # -----------------------------------------------------------------------------
 function update_config_file() {
@@ -2063,7 +2074,7 @@ function update_test_files() {
 
 # -----------------------------------------------------------------------------
 # Method to get tag substring, must be after group name, start with Tag til end
-# ex: ossGrp1TagSomething
+# ex: basicGrp1TagSomething
 # -----------------------------------------------------------------------------
 function parse_str() {
   local testGrp=$1
@@ -2200,7 +2211,7 @@ function set_linux_package() {
     return
   fi
 
-  if [ $_grp == "ossGrp1" ] ||  [ $_grp == "xpackGrp1" ]; then
+  if [ $_grp == "basicGrp1" ] ||  [ $_grp == "xpackGrp1" ]; then
     export ESTF_TEST_PACKAGE="tar.gz"
     return
   fi
@@ -2208,7 +2219,7 @@ function set_linux_package() {
   # TODO: need sudo enable on Jenkins
     export ESTF_TEST_PACKAGE="tar.gz"
     return
-  # -- remove once done 
+  # -- remove once done
 
   rpmSupported=$(which rpm &>/dev/null; echo $?)
   dpkgSupported=$(which dpkg &>/dev/null; echo $?)
@@ -2307,11 +2318,11 @@ function install_kibana_pkg() {
 # update_kibana_settings
 # -----------------------------------------------------------------------------
 function update_kibana_settings() {
-  local type=${TEST_KIBANA_BUILD:-oss}
+  local type=${TEST_KIBANA_BUILD:-basic}
 
   echo_info "Update Kibana settings"
-  if [ "$type" == "oss" ]; then
-    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/oss/kibana.yml --output kibana.yml
+  if [ "$type" == "basic" ]; then
+    curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/basic/kibana.yml --output kibana.yml
   else
     curl -s https://raw.githubusercontent.com/elastic/elastic-stack-testing/${Glb_Kibana_Branch}/ci/kibana/settings/kibana.yml --output kibana.yml
   fi
@@ -2456,7 +2467,7 @@ function start_kibana_service() {
 # Install debian packages for elasticsearch and kibana
 # -----------------------------------------------------------------------------
 function install_packages() {
-  local type=${TEST_KIBANA_BUILD:-oss}
+  local type=${TEST_KIBANA_BUILD:-basic}
 
   if [ "$ESTF_TEST_PACKAGE" != "rpm" ] && [ "$ESTF_TEST_PACKAGE" != "deb" ]; then
     echo_error_exit "Invalid pkg: $ESTF_TEST_PACKAGE"
@@ -2479,13 +2490,13 @@ function install_packages() {
   download_kibana_pkg
   install_kibana_pkg
 
-  if [ "$type" != "oss" ]; then
+  if [ "$type" != "basic" ]; then
     elasticsearch_generate_certs
   fi
 
   start_elasticsearch_service
 
-  if [ "$type" != "oss" ]; then
+  if [ "$type" != "basic" ]; then
     elasticsearch_setup_passwords
   fi
 
@@ -2493,7 +2504,7 @@ function install_packages() {
 
   start_kibana_service
 
-  if [ "$type" == "oss" ]; then
+  if [ "$type" == "basic" ]; then
     export TEST_KIBANA_PROTOCOL=http
     export TEST_KIBANA_PORT=5601
     export TEST_ES_PROTOCOL=http
@@ -2506,10 +2517,10 @@ function install_packages() {
 # Install standalone servers
 # ----------------------------------------------------------------------------
 function install_standalone_servers() {
-  local type=${TEST_KIBANA_BUILD:-oss}
+  local type=${TEST_KIBANA_BUILD:-basic}
 
   if [ "$ESTF_TEST_PACKAGE" = "docker" ]; then
-    if [ "$type" != "oss" ]; then
+    if [ "$type" != "basic" ]; then
       TEST_KIBANA_BUILD=$(random_docker_image)
     fi
     docker_load
@@ -2587,13 +2598,13 @@ case "$TEST_GROUP" in
     fi
     run_unit_tests
     ;;
-  ossGrp*)
+  basicGrp*)
     if [ $PLATFORM == "cloud" ]; then
-      run_cloud_oss_tests $TEST_GROUP
+      run_cloud_basic_tests $TEST_GROUP
     elif [ ! -z  $ESTF_TEST_PACKAGE ] && [ $ESTF_TEST_PACKAGE != "tar.gz" ]; then
-      run_standalone_oss_tests $TEST_GROUP
+      run_standalone_basic_tests $TEST_GROUP
     else
-      run_oss_tests $TEST_GROUP
+      run_basic_tests $TEST_GROUP
     fi
     ;;
   xpackIntake)
@@ -2621,7 +2632,7 @@ case "$TEST_GROUP" in
     fi
     ;;
   selenium)
-    run_oss_tests
+    run_basic_tests
     ;;
   xpack)
     run_xpack_ext_tests true
@@ -2630,13 +2641,13 @@ case "$TEST_GROUP" in
     run_unit_tests
     ;;
   cloud_selenium)
-    run_cloud_oss_tests
+    run_cloud_basic_tests
     ;;
   cloud_xpack)
     run_cloud_xpack_ext_tests true
     ;;
-  visual_tests_oss)
-    run_visual_tests_oss
+  visual_tests_basic)
+    run_visual_tests_basic
     ;;
   visual_tests_default)
     run_visual_tests_default
