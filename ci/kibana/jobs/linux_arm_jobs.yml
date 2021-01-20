@@ -1,5 +1,3 @@
-TASK:
-  - ece_run_kibana_tests
 JOB:
   - basicGrp1
   - basicGrp2
@@ -8,6 +6,9 @@ JOB:
   - xpackGrp2
   - xpackGrp3
   - xpackGrp4
-  - xpackExt
+  - xpackExtGrp1
+  - xpackExtGrp2
+  - xpackExtGrp3
+  - xpackExtGrp4
 
 exclude: ~

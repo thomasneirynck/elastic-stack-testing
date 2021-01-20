@@ -1,5 +1,5 @@
-ossGrp1="console
-         getting_started
+basicGrp1="bundles
+         console
          context
          discover
          home
@@ -8,10 +8,10 @@ ossGrp1="console
          timelion
         "
 
-ossGrp2="visualize
+basicGrp2="visualize
         "
 
-ossGrp3="dashboard
+basicGrp3="dashboard
         "
 
 xpackGrp1="advanced_settings
