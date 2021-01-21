@@ -757,6 +757,13 @@ function set_percy_target_branch() {
 }
 
 # -----------------------------------------------------------------------------
+# Method to set puppeteer executable
+# -----------------------------------------------------------------------------
+function set_puppeteer_exe() {
+  export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+}
+
+# -----------------------------------------------------------------------------
 # Method to copy basic visual tests into Kibana repo
 # -----------------------------------------------------------------------------
 function cp_visual_tests() {
@@ -1568,6 +1575,7 @@ function run_visual_tests_basic() {
   check_percy_pkg
   run_ci_setup
   set_percy_target_branch
+  set_puppeteer_exe
 
   remove_oss
   TEST_KIBANA_BUILD=basic
@@ -1592,6 +1600,7 @@ function run_visual_tests_default() {
   check_percy_pkg
   run_ci_setup
   set_percy_target_branch
+  set_puppeteer_exe
 
   TEST_KIBANA_BUILD=default
   install_kibana
