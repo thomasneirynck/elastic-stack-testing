@@ -1837,6 +1837,7 @@ function run_standalone_basic_tests() {
   run_ci_setup
   includeTags=$(update_config "test/functional/config.js" $testGrp)
   update_test_files
+  disable_security_user
 
   export TEST_BROWSER_HEADLESS=1
 
@@ -1976,9 +1977,13 @@ function run_standalone_xpack_ext_tests() {
 # Method to use basic license instead of oss
 # -----------------------------------------------------------------------------
 function remove_oss() {
-  sed -i "s/license: 'oss'/license: 'basic'/g" test/common/config.js
-  sed -i '/--oss/d' test/new_visualize_flow/config.ts
-  sed -i '/--oss/d' test/functional/config.js
+  local label=""
+  if [[ "$Glb_OS" = "darwin" ]]; then
+    label=".bak"
+  fi
+  sed -i $label "s/license: 'oss'/license: 'basic'/g" test/common/config.js
+  sed -i $label '/--oss/d' test/new_visualize_flow/config.ts
+  sed -i $label '/--oss/d' test/functional/config.js
 }
 
 # -----------------------------------------------------------------------------
@@ -2037,6 +2042,11 @@ function update_report_name() {
     return
   fi
 
+  local label=""
+  if [[ "$Glb_OS" = "darwin" ]]; then
+    label=".bak"
+  fi
+
   hasReportName=$(grep -c "reportName" $configFile)
   if [[ $hasReportName == 0 ]]; then
     importCfg=$(grep "createTestConfig.*from" $configFile | grep -Eo "'.*'" | tr -d "'")
@@ -2055,17 +2065,36 @@ function update_report_name() {
   if [[ $file_modified == 0 ]]; then
     brace=$(grep -Ec "reportName.*}," $configFile)
     if [[ $brace > 0 ]]; then
-      sed -i '/reportName:.*/ s/},/ + process.env.ESTF_RUN_NUMBER},/' $configFile
+      sed -i $label '/reportName:.*/ s/},/ + process.env.ESTF_RUN_NUMBER},/' $configFile
     else
-      sed -i '/reportName:.*/ s/,/ + process.env.ESTF_RUN_NUMBER,/' $configFile
+      sed -i $label '/reportName:.*/ s/,/ + process.env.ESTF_RUN_NUMBER,/' $configFile
     fi
   fi
+}
+
+# -----------------------------------------------------------------------------
+# Method to update disable_security_user
+# -----------------------------------------------------------------------------
+function disable_security_user() {
+  local configFile="test/functional/config.js"
+
+  file_modified=$(grep -c "disableTestUser" $configFile)
+  echo "$configFile already modified: $file_modified"
+  if [[ $file_modified == 0 ]]; then
+    sed -ri "/\s+security:.*/a \      disableTestUser: true," $configFile
+    echo $?
+  fi
+
 }
 
 # -----------------------------------------------------------------------------
 # Method to update test files
 # -----------------------------------------------------------------------------
 function update_test_files() {
+  local label=""
+  if [[ "$Glb_OS" = "darwin" ]]; then
+    label=".bak"
+  fi
   IFS='
   '
   for item in $ESTF_FLAKY_TEST_SUITE
@@ -2076,7 +2105,7 @@ function update_test_files() {
     file_modified=$?
     echo_debug "$testFile already modified: $file_modified"
     if [[ $file_modified == 0 ]]; then
-      sed -i '0,/describe(/ s/describe(/describe\.only(/' $testFile
+      sed -i $label '0,/describe(/ s/describe(/describe\.only(/' $testFile
     fi
   done
 }
@@ -2556,9 +2585,7 @@ function install_standalone_servers() {
   local type=${TEST_KIBANA_BUILD:-basic}
 
   if [ "$ESTF_TEST_PACKAGE" = "docker" ]; then
-    if [ "$type" != "basic" ]; then
-      TEST_KIBANA_BUILD=$(random_docker_image)
-    fi
+    TEST_KIBANA_BUILD=$(random_docker_image)
     docker_load
   elif [ "$ESTF_TEST_PACKAGE" = "deb" ] || [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
     install_packages
