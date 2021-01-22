@@ -2585,7 +2585,9 @@ function install_standalone_servers() {
   local type=${TEST_KIBANA_BUILD:-basic}
 
   if [ "$ESTF_TEST_PACKAGE" = "docker" ]; then
-    TEST_KIBANA_BUILD=$(random_docker_image)
+    if [ "$type" != "basic" ]; then
+      TEST_KIBANA_BUILD=$(random_docker_image)	
+    fi
     docker_load
   elif [ "$ESTF_TEST_PACKAGE" = "deb" ] || [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
     install_packages
