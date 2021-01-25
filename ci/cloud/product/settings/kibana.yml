@@ -17,4 +17,3 @@ xpack.security.session.idleTimeout: 3600000
 xpack.reporting.capture.timeouts.openUrl: 60000
 map.proxyElasticMapsServiceInMaps: true
 xpack.reporting.capture.networkPolicy.rules: [ { "allow": true,"protocol": "http:" },{ "allow": false,"host": "via.placeholder.com" },{ "allow": true,"protocol": "https:" },{ "allow": true,"protocol": "data:" },{ "allow": false } ]
-xpack.data_enhanced.search.sendToBackground.enabled: true
