@@ -63,7 +63,6 @@ xpackGrp4="api_keys
 
 xpackExtGrp1="alerting_api_integration
               api_integration
-              kerberos_api_integration
               plugin_api_integration
               reporting
               reporting_api_integration
@@ -72,11 +71,7 @@ xpackExtGrp1="alerting_api_integration
 xpackExtGrp2="apm_api_integration
               case_api_integration
               lists_api_integration
-              oidc_api_integration
-              pki_api_integration
-              saml_api_integration
               spaces_api_integration
-              token_api_integration
              "
 
 xpackExtGrp3="encrypted_saved_objects_api_integration
@@ -91,7 +86,6 @@ xpackExtGrp3="encrypted_saved_objects_api_integration
 
 xpackExtGrp4="detection_engine_api_integration
               ingest_manager_api_integration
-              login_selector_api_integration
               security_api_integration
               security_functional
               security_solution_endpoint
