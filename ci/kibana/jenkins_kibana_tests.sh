@@ -2262,10 +2262,10 @@ function set_linux_package() {
   rpmSupported=$(which rpm &>/dev/null; echo $?)
   dpkgSupported=$(which dpkg &>/dev/null; echo $?)
 
-  if [ $rpmSupported -eq 0 ]; then
-    export ESTF_TEST_PACKAGE="rpm"
-  elif [ $dpkgSupported -eq 0 ]; then
+  if [ $dpkgSupported -eq 0 ]; then
     export ESTF_TEST_PACKAGE="deb"
+  elif [ $rpmSupported -eq 0 ]; then
+    export ESTF_TEST_PACKAGE="rpm"
   else
     export ESTF_TEST_PACKAGE="tar.gz"
   fi
