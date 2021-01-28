@@ -2255,8 +2255,8 @@ function set_linux_package() {
   fi
 
   # TODO: need sudo enable on Jenkins
-  export ESTF_TEST_PACKAGE="tar.gz"
-  return
+  #export ESTF_TEST_PACKAGE="tar.gz"
+  #return
   # -- remove once done
 
   rpmSupported=$(which rpm &>/dev/null; echo $?)
@@ -2586,7 +2586,7 @@ function install_standalone_servers() {
 
   if [ "$ESTF_TEST_PACKAGE" = "docker" ]; then
     if [ "$type" != "basic" ]; then
-      TEST_KIBANA_BUILD=$(random_docker_image)	
+      TEST_KIBANA_BUILD=$(random_docker_image)
     fi
     docker_load
   elif [ "$ESTF_TEST_PACKAGE" = "deb" ] || [ "$ESTF_TEST_PACKAGE" = "rpm" ]; then
