@@ -4,7 +4,6 @@ server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 telemetry.banner: false
 vis_type_timelion.ui.enabled: true
 data.search.aggs.shardDelay.enabled: true
-xpack.encryptedSavedObjects.encryptionKey: "DkdXazszSCYexXqz4YktBGHCRkV6hyNK"
 xpack.maps.preserveDrawingBuffer: true
 xpack.maps.showMapsInspectorAdapter: true
 xpack.reporting.capture.maxAttempts: 1
@@ -12,8 +11,6 @@ xpack.reporting.csv.checkForFormulas: false
 xpack.reporting.csv.enablePanelActionDownload: true
 xpack.reporting.csv.maxSizeBytes: 2850
 xpack.reporting.queue.pollInterval: 3000
-xpack.security.encryptionKey: "wuGNaIhoMpk5sO4UBxgr3NyW1sFcLgIf"
-xpack.security.session.idleTimeout: 3600000
 xpack.reporting.capture.timeouts.openUrl: 60000
 map.proxyElasticMapsServiceInMaps: true
 xpack.reporting.capture.networkPolicy.rules: [ { "allow": true,"protocol": "http:" },{ "allow": false,"host": "via.placeholder.com" },{ "allow": true,"protocol": "https:" },{ "allow": true,"protocol": "data:" },{ "allow": false } ]
