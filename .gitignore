@@ -29,3 +29,4 @@ gradle-app.setting
 # Other
 .cache/
 /ait_workspace/
+.idea/

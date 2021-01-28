@@ -2220,7 +2220,6 @@ Glb_xpackExtGrp1Cfg="test/api_integration/config.js
                     "
 Glb_xpackExtGrp2Cfg="test/detection_engine_api_integration/security_and_spaces/config.ts
                      test/ingest_manager_api_integration/config.ts
-                     test/security_api_integration/session_idle.config.ts
                      test/security_solution_endpoint/config.ts
                      test/security_solution_endpoint_api_int/config.ts
                     "
