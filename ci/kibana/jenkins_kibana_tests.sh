@@ -2446,7 +2446,7 @@ EOM
 # -----------------------------------------------------------------------------
 function elasticsearch_setup_passwords() {
   local _kbnHome="/etc/kibana"
-  local _ip=$(hostname -I | sed 's/ *$//g')
+  local _ip=$(hostname -I | sed 's/ *$//g' | awk '{print $1}')
 
   echo_info "Setup passwords"
   echo "y" | sudo -s /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto  | tee passwords.txt
