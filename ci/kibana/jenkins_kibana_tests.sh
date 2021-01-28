@@ -2378,7 +2378,7 @@ function update_kibana_settings() {
 function elasticsearch_generate_certs() {
   local _esHome="/etc/elasticsearch"
   local _kbnHome="/etc/kibana"
-  local _ip=$(hostname -I | sed 's/ *$//g')
+  local _ip=$(hostname -I | sed 's/ *$//g' | awk '{print $1}')
   local _isNewCertUtils=$(vge $_version "8.0")
 
   echo_info "Generate Elasticsearch certificates"
