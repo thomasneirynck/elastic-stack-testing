@@ -2,6 +2,7 @@ home.disableWelcomeScreen: true
 telemetry.banner: false
 server.uuid: 5b2de169-2785-441b-ae8c-186a1936b17d
 xpack.maps.showMapsInspectorAdapter: true
+xpack.maps.showMapVisualizationTypes: true
 xpack.maps.preserveDrawingBuffer: true
 xpack.reporting.queue.pollInterval: 3000
 xpack.reporting.csv.maxSizeBytes: 2850
