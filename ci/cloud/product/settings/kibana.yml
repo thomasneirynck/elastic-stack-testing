@@ -6,6 +6,7 @@ vis_type_timelion.ui.enabled: true
 data.search.aggs.shardDelay.enabled: true
 xpack.maps.preserveDrawingBuffer: true
 xpack.maps.showMapsInspectorAdapter: true
+xpack.maps.showMapVisualizationTypes: true
 xpack.reporting.capture.maxAttempts: 1
 xpack.reporting.csv.checkForFormulas: false
 xpack.reporting.csv.enablePanelActionDownload: true
@@ -14,4 +15,4 @@ xpack.reporting.queue.pollInterval: 3000
 xpack.reporting.capture.timeouts.openUrl: 60000
 map.proxyElasticMapsServiceInMaps: true
 xpack.reporting.capture.networkPolicy.rules: [ { "allow": true,"protocol": "http:" },{ "allow": false,"host": "via.placeholder.com" },{ "allow": true,"protocol": "https:" },{ "allow": true,"protocol": "data:" },{ "allow": false } ]
-xpack.data_enhanced.search.sendToBackground.enabled: true
+xpack.data_enhanced.search.sessions.enabled: true
