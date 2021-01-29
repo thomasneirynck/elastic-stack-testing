@@ -7,6 +7,7 @@ data.search.aggs.shardDelay.enabled: true
 xpack.encryptedSavedObjects.encryptionKey: "DkdXazszSCYexXqz4YktBGHCRkV6hyNK"
 xpack.maps.preserveDrawingBuffer: true
 xpack.maps.showMapsInspectorAdapter: true
+xpack.maps.showMapVisualizationTypes: true
 xpack.reporting.capture.maxAttempts: 1
 xpack.reporting.csv.checkForFormulas: false
 xpack.reporting.csv.enablePanelActionDownload: true
