@@ -282,6 +282,10 @@ function get_os() {
     if [[ -z $Glb_Chromium ]] || [[ -z $Glb_ChromeDriver ]]; then
       echo_error_exit "Chromium and Chromedriver must be installed! Chromium: $Glb_Chromium, ChromeDriver: $Glb_ChromeDriver"
     fi
+  f
+
+  if [[ "$Glb_OS" = "darwin" ]] || [[ "$Glb_Arch" = "aarch64" ]]; then
+    Glb_KbnClean="yes"
   fi
 
   echo_info "Running on OS: $Glb_OS"
@@ -757,6 +761,7 @@ function run_ci_cleanup() {
     remove_node_modules_dir
     remove_install_dir
     remove_es_install_dir
+    uninstall_packages
   fi
 }
 
@@ -1843,6 +1848,11 @@ function run_standalone_basic_tests() {
 
   install_standalone_servers
 
+  if [[ ! -z "$ESTF_TEST_PACKAGE" ]] && [[ "$ESTF_TEST_PACKAGE" == "rpm" ]] && [[ "$Glb_Arch" != "aarch64" ]]; then
+    echo_warning "Tests are not supported on this platform!!"
+    return
+  fi
+
   failures=0
   for i in $(seq 1 1 $maxRuns); do
     export ESTF_RUN_NUMBER=$i
@@ -1880,6 +1890,10 @@ function run_standalone_xpack_func_tests() {
   export TEST_BROWSER_HEADLESS=1
 
   install_standalone_servers
+  if [[ ! -z "$ESTF_TEST_PACKAGE" ]] && [[ "$ESTF_TEST_PACKAGE" == "rpm" ]] && [[ "$Glb_Arch" != "aarch64" ]]; then
+    echo_warning "Tests are not supported on this platform!!"
+    return
+  fi
 
   local _xpack_dir="$(cd x-pack; pwd)"
   echo_info "-> XPACK_DIR ${_xpack_dir}"
@@ -1928,6 +1942,10 @@ function run_standalone_xpack_ext_tests() {
   export TEST_BROWSER_HEADLESS=1
 
   install_standalone_servers
+  if [[ ! -z "$ESTF_TEST_PACKAGE" ]] && [[ "$ESTF_TEST_PACKAGE" == "rpm" ]] && [[ "$Glb_Arch" != "aarch64" ]]; then
+    echo_warning "Tests are not supported on this platform!!"
+    return
+  fi
 
   local _xpack_dir="$(cd x-pack; pwd)"
   echo_info "-> XPACK_DIR ${_xpack_dir}"
@@ -2575,6 +2593,43 @@ function install_packages() {
     export TEST_ES_PROTOCOL=http
     export TEST_ES_PORT=9200
   fi
+
+}
+
+# -----------------------------------------------------------------------------
+# Uninstall debian packages for elasticsearch and kibana
+# -----------------------------------------------------------------------------
+function uninstall_packages() {
+
+  if [ -z  "$ESTF_TEST_PACKAGE" ]; then
+    return
+  fi
+
+  if [ "$ESTF_TEST_PACKAGE" != "rpm" ] && [ "$ESTF_TEST_PACKAGE" != "deb" ]; then
+    return
+  fi
+
+  if [[ "$Glb_Arch" != "aarch64" ]]; then
+    return
+  fi
+
+  echo_info "Remove packages"
+
+  if [ "$ESTF_TEST_PACKAGE" = "deb" ]; then
+    sudo dpkg --remove kibana
+    sudo dpkg --purge kibana
+    sudo dpkg --remove elasticsearch
+    sudo dpkg --purge elasticsearch
+  else
+    sudo rpm -e kibana
+    sudo rpm -e elasticsearch
+  fi
+
+  echo "Remove directories"
+  sudo rm -rf /var/lib/kibana
+  sudo rm -rf /etc/kibana
+  sudo rm -rf /var/lib/elasticsearch
+  sudo rm -rf /etc/elasticsearch
 
 }
 
